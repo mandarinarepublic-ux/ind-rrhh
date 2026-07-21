@@ -29,7 +29,7 @@ const RECURSOS = {
       'direccion', 'foto_url', 'cargo', 'area', 'jefe_id', 'fecha_ingreso',
       'fecha_salida', 'tipo_contrato', 'sueldo_base', 'jornada', 'banco',
       'tipo_cuenta', 'nro_cuenta', 'rol', 'estado', 'motivo_salida', 'notas',
-      'vacaciones_ajuste',
+      'vacaciones_ajuste', 'nomina_desde',
     ],
   },
   ausencias: {

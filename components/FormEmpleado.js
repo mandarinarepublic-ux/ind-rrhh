@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { api } from '@/lib/api';
-import { Aviso, Entrada, Selector } from '@/components/ui';
+import { Aviso, Campo, Entrada, Selector } from '@/components/ui';
 import { hoyISO } from '@/lib/fmt';
 
 const AREAS = ['PRODUCCION', 'BODEGA', 'VENTAS', 'ADMINISTRACION', 'LOGISTICA', 'DISENO', 'OTRA'];
@@ -21,6 +21,7 @@ const VACIO = {
   telefono: '', email: '', banco: '', tipo_cuenta: '', nro_cuenta: '',
   rol: 'EMPLEADO', estado: 'ACTIVO', vacaciones_ajuste: 0, jefe_id: '',
   fecha_salida: '', motivo_salida: '', notas: '',
+  nomina_desde: `${hoyISO().slice(0, 7)}-01`,
 };
 
 export default function FormEmpleado({ empleado, jefes = [], onListo, onCancelar }) {
@@ -45,6 +46,8 @@ export default function FormEmpleado({ empleado, jefes = [], onListo, onCancelar
       vacaciones_ajuste: f.vacaciones_ajuste === '' ? 0 : Number(f.vacaciones_ajuste),
       jefe_id: f.jefe_id || null,
       fecha_salida: f.fecha_salida || null,
+      // el input tipo month da 'YYYY-MM'; la columna es date
+      nomina_desde: f.nomina_desde ? `${String(f.nomina_desde).slice(0, 7)}-01` : null,
     };
     if (pin) datos.pin = pin;
 
@@ -112,11 +115,23 @@ export default function FormEmpleado({ empleado, jefes = [], onListo, onCancelar
         />
       </section>
 
-      <Entrada
-        etiqueta="Ajuste de vacaciones (dias)"
-        hint="Saldo con el que arranca en el sistema. Positivo = dias a favor que trae de antes; negativo = dias que ya goz&oacute; y no estan cargados aqui."
-        type="number" step="0.5" value={f.vacaciones_ajuste ?? 0} onChange={set('vacaciones_ajuste')}
-      />
+      <section className="grid sm:grid-cols-2 gap-3">
+        <Entrada
+          etiqueta="Ajuste de vacaciones (dias)"
+          hint="Saldo con el que arranca en el sistema. Positivo = dias a favor que trae de antes; negativo = dias que ya gozo y no estan cargados aqui."
+          type="number" step="0.5" value={f.vacaciones_ajuste ?? 0} onChange={set('vacaciones_ajuste')}
+        />
+        <Campo
+          etiqueta="La nomina cuenta desde"
+          hint="Primer mes en que el sistema empieza a sumar el sueldo adeudado. Ponlo mas atras solo si le arrastras meses pasados a proposito."
+        >
+          <input
+            type="month" className="campo"
+            value={(f.nomina_desde || '').slice(0, 7)}
+            onChange={(e) => setF({ ...f, nomina_desde: e.target.value })}
+          />
+        </Campo>
+      </section>
 
       {f.estado === 'INACTIVO' && (
         <section className="grid sm:grid-cols-2 gap-3">

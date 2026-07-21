@@ -20,10 +20,10 @@ export default function PorPagar() {
 
   function exportarCSV() {
     const filas = [
-      ['Empleado', 'Cargo', 'Sueldo del mes', 'Pagado', 'Falta sueldo', 'Extras por pagar', 'Anticipo', 'TOTAL POR PAGAR'],
+      ['Empleado', 'Cargo', 'Meses', 'Sueldo acumulado', 'Pagado', 'Falta sueldo', 'Extras por pagar', 'Anticipo', 'TOTAL POR PAGAR'],
       ...datos.filas.map((f) => [
-        `${f.empleado.nombres} ${f.empleado.apellidos}`, f.empleado.cargo || '',
-        f.sueldo_base, f.pagado_sueldo, Math.max(0, f.falta_sueldo),
+        `${f.empleado.nombres} ${f.empleado.apellidos}`, f.empleado.cargo || '', f.meses,
+        f.sueldo_acumulado, f.pagado_sueldo, f.falta_sueldo,
         f.extras_por_pagar, f.anticipo_saldo, f.total_por_pagar,
       ]),
     ];
@@ -63,10 +63,10 @@ export default function PorPagar() {
           </div>
 
           <div className="tarjeta p-4 bg-ind-50/50 border-ind-100 text-sm text-slate-600">
-            <b className="text-slate-700">Cómo se calcula:</b> cada mes acumula el sueldo base de la persona.
-            El total por pagar es <b>sueldo del mes − lo que ya le pagaste este mes</b>, más las
-            <b> horas extra aprobadas sin pagar</b>, menos los <b>anticipos</b> que se le descuentan.
-            Solo cuenta desde que empezaste a usar el sistema.
+            <b className="text-slate-700">Cómo se calcula:</b> el sueldo se acumula mes a mes y
+            <b> lo que quede sin pagar se arrastra</b>. El total es <b>sueldo acumulado − lo ya pagado</b>,
+            más <b>horas extra aprobadas sin pagar</b>, menos <b>anticipos</b>. Cada persona acumula
+            desde su mes de inicio de nómina (editable en su ficha), nunca desde antes.
           </div>
 
           {datos.filas.length === 0 ? (
@@ -78,7 +78,7 @@ export default function PorPagar() {
                   <thead className="bg-slate-50">
                     <tr>
                       <th className="th">Persona</th>
-                      <th className="th text-right">Sueldo del mes</th>
+                      <th className="th text-right">Sueldo acumulado</th>
                       <th className="th text-right">Pagado</th>
                       <th className="th text-right">Falta sueldo</th>
                       <th className="th text-right">Extras</th>
@@ -100,7 +100,14 @@ export default function PorPagar() {
                             </span>
                           </Link>
                         </td>
-                        <td className="td text-right text-slate-500">{money(f.sueldo_base)}</td>
+                        <td className="td text-right text-slate-500">
+                          {money(f.sueldo_acumulado)}
+                          {f.meses > 1 && (
+                            <span className="block text-xs text-slate-400">
+                              {f.meses} meses × {money(f.sueldo_base)}
+                            </span>
+                          )}
+                        </td>
                         <td className="td text-right text-slate-500">{money(f.pagado_sueldo)}</td>
                         <td className="td text-right">
                           {f.falta_sueldo < 0
