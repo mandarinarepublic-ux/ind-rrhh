@@ -106,6 +106,16 @@ function limpiar(cfg, body) {
   return salida;
 }
 
+/**
+ * Un pago SIEMPRE pertenece a un mes. Si no lo dicen, se toma el mes de la
+ * fecha de pago. Asi la vista mensual nunca deja pagos sueltos fuera.
+ */
+function completarPeriodo(recurso, datos) {
+  if (recurso !== 'pagos') return;
+  if (datos.periodo || !datos.fecha_pago) return;
+  datos.periodo = String(datos.fecha_pago).slice(0, 7); // YYYY-MM
+}
+
 // --- excepciones al "solo admin escribe" -------------------------------
 // Un empleado puede PEDIR sus vacaciones y cancelar la solicitud mientras
 // siga pendiente. Un jefe puede aprobar/rechazar a su equipo.
@@ -209,6 +219,7 @@ export async function POST(req, { params }) {
       datos.pin_hash = await bcrypt.hash(String(body.pin), 10);
     }
 
+    completarPeriodo(params.recurso, datos);
     if (cfg.firmaCreador) datos[cfg.firmaCreador] = sesion.nombre;
 
     const { data, error: err } = await getSupabase()
@@ -254,6 +265,11 @@ export async function PATCH(req, { params }) {
     if (!antes) return error('Registro no encontrado.', 404);
 
     const datos = limpiar(cfg, body);
+
+    // Si al editar se borra el mes, se vuelve a deducir de la fecha de pago.
+    if (params.recurso === 'pagos' && datos.periodo === null) {
+      datos.periodo = String(datos.fecha_pago || antes.fecha_pago || '').slice(0, 7) || null;
+    }
 
     if (!esAdmin(sesion)) {
       const dueno = cfg.columnaScope ? antes[cfg.columnaScope] : null;

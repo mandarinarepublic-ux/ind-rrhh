@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { Avatar, Aviso, Cargando, Chip, Modal, Vacio } from '@/components/ui';
-import { fecha, money, dias, diasEntre, hoyISO, periodoActual } from '@/lib/fmt';
+import Adjunto from '@/components/Adjunto';
+import { fecha, money, dias, diasEntre, hoyISO, periodo, periodoActual } from '@/lib/fmt';
 
 const PESTANAS = [
   { id: 'ausencias',   texto: 'Faltas y permisos', icono: '🚫' },
@@ -22,7 +23,7 @@ export default function Expediente() {
   const [saldo, setSaldo] = useState(null);
   const [pestana, setPestana] = useState('ausencias');
   const [registros, setRegistros] = useState(null);
-  const [nuevo, setNuevo] = useState(false);
+  const [editando, setEditando] = useState(null); // registro | 'nuevo' | null
   const [error, setError] = useState('');
 
   const cargarFicha = useCallback(async () => {
@@ -124,7 +125,7 @@ export default function Expediente() {
           <h2 className="font-semibold text-slate-700">
             {PESTANAS.find((p) => p.id === pestana)?.texto}
           </h2>
-          <button onClick={() => setNuevo(true)} className="btn-primario !py-2 !px-3 text-sm">
+          <button onClick={() => setEditando('nuevo')} className="btn-primario !py-2 !px-3 text-sm">
             + Registrar
           </button>
         </div>
@@ -134,20 +135,26 @@ export default function Expediente() {
         ) : registros.length === 0 ? (
           <Vacio icono="📄" titulo="Sin registros todavia" />
         ) : (
-          <Listado pestana={pestana} registros={registros} onBorrar={borrar} />
+          <Listado
+            pestana={pestana}
+            registros={registros}
+            onEditar={setEditando}
+            onBorrar={borrar}
+          />
         )}
       </div>
 
       <Modal
-        abierto={nuevo}
-        titulo={`Registrar · ${PESTANAS.find((p) => p.id === pestana)?.texto}`}
-        onCerrar={() => setNuevo(false)}
+        abierto={Boolean(editando)}
+        titulo={`${editando === 'nuevo' ? 'Registrar' : 'Editar'} · ${PESTANAS.find((p) => p.id === pestana)?.texto}`}
+        onCerrar={() => setEditando(null)}
       >
         <FormRegistro
           pestana={pestana}
           empleado={empleado}
-          onCancelar={() => setNuevo(false)}
-          onListo={() => { setNuevo(false); cargarPestana(); cargarFicha(); }}
+          registro={editando === 'nuevo' ? null : editando}
+          onCancelar={() => setEditando(null)}
+          onListo={() => { setEditando(null); cargarPestana(); cargarFicha(); }}
         />
       </Modal>
     </div>
@@ -166,16 +173,23 @@ function Dato({ titulo, valor, resaltar }) {
 // =====================================================================
 // Listados por pestana
 // =====================================================================
-function Listado({ pestana, registros, onBorrar }) {
-  const Fila = ({ children }) => (
-    <tr className="hover:bg-slate-50 border-t border-slate-100">{children}</tr>
+function Listado({ pestana, registros, onEditar, onBorrar }) {
+  // Toda la fila abre la edicion; el boton de borrar no debe propagarse.
+  const Fila = ({ registro, children }) => (
+    <tr
+      onClick={() => onEditar(registro)}
+      className="hover:bg-ind-50/50 border-t border-slate-100 cursor-pointer"
+      title="Clic para editar"
+    >
+      {children}
+    </tr>
   );
 
   const columnas = {
     ausencias: ['Fecha', 'Tipo', 'Dias', 'Justificada', 'Motivo', ''],
     horas_extra: ['Fecha', 'Horas', 'Recargo', 'Valor', 'Estado', ''],
     vacaciones: ['Desde', 'Hasta', 'Dias', 'Estado', 'Observacion', ''],
-    pagos: ['Fecha', 'Concepto', 'Periodo', 'Bruto', 'Desc.', 'Neto', ''],
+    pagos: ['Fecha', 'Concepto', 'Mes', 'Bruto', 'Desc.', 'Neto', ''],
     anticipos: ['Fecha', 'Monto', 'Cuotas', 'Motivo', 'Estado', ''],
   }[pestana];
 
@@ -189,27 +203,34 @@ function Listado({ pestana, registros, onBorrar }) {
           {registros.map((r) => {
             const borrarBtn = (
               <td className="td text-right">
-                <button onClick={() => onBorrar(r)} className="text-slate-300 hover:text-rose-600" title="Borrar">
+                <button
+                  onClick={(e) => { e.stopPropagation(); onBorrar(r); }}
+                  className="text-slate-300 hover:text-rose-600"
+                  title="Borrar"
+                >
                   ✕
                 </button>
               </td>
             );
 
             if (pestana === 'ausencias') return (
-              <Fila key={r.id}>
+              <Fila key={r.id} registro={r}>
                 <td className="td">{fecha(r.fecha_desde)}
                   {r.fecha_hasta !== r.fecha_desde && <span className="text-slate-400"> → {fecha(r.fecha_hasta)}</span>}
                 </td>
                 <td className="td"><Chip>{r.tipo}</Chip></td>
                 <td className="td">{dias(r.dias)}</td>
                 <td className="td">{r.justificada ? '✅ si' : '❌ no'}</td>
-                <td className="td text-slate-500 max-w-[220px] truncate">{r.motivo || '—'}</td>
+                <td className="td text-slate-500 max-w-[220px] truncate">
+                  {r.adjunto_url && <span title="Tiene adjunto">📎 </span>}
+                  {r.motivo || '—'}
+                </td>
                 {borrarBtn}
               </Fila>
             );
 
             if (pestana === 'horas_extra') return (
-              <Fila key={r.id}>
+              <Fila key={r.id} registro={r}>
                 <td className="td">{fecha(r.fecha)}</td>
                 <td className="td font-medium">{dias(r.horas)} h</td>
                 <td className="td">+{r.recargo}%</td>
@@ -220,7 +241,7 @@ function Listado({ pestana, registros, onBorrar }) {
             );
 
             if (pestana === 'vacaciones') return (
-              <Fila key={r.id}>
+              <Fila key={r.id} registro={r}>
                 <td className="td">{fecha(r.fecha_desde)}</td>
                 <td className="td">{fecha(r.fecha_hasta)}</td>
                 <td className="td font-medium">{dias(r.dias)}</td>
@@ -231,10 +252,13 @@ function Listado({ pestana, registros, onBorrar }) {
             );
 
             if (pestana === 'pagos') return (
-              <Fila key={r.id}>
-                <td className="td">{fecha(r.fecha_pago)}</td>
+              <Fila key={r.id} registro={r}>
+                <td className="td whitespace-nowrap">
+                  {r.comprobante_url && <span title="Tiene comprobante">📎 </span>}
+                  {fecha(r.fecha_pago)}
+                </td>
                 <td className="td"><Chip tono="CANCELADA">{r.concepto.replace(/_/g, ' ')}</Chip></td>
-                <td className="td text-slate-500">{r.periodo || '—'}</td>
+                <td className="td text-slate-500 capitalize">{periodo(r.periodo)}</td>
                 <td className="td">{money(r.monto_bruto)}</td>
                 <td className="td text-rose-600">{Number(r.descuentos) ? `−${money(r.descuentos)}` : '—'}</td>
                 <td className="td font-semibold">{money(r.monto_neto)}</td>
@@ -243,7 +267,7 @@ function Listado({ pestana, registros, onBorrar }) {
             );
 
             return (
-              <Fila key={r.id}>
+              <Fila key={r.id} registro={r}>
                 <td className="td">{fecha(r.fecha)}</td>
                 <td className="td font-medium">{money(r.monto)}</td>
                 <td className="td">{r.cuotas}</td>
@@ -262,18 +286,30 @@ function Listado({ pestana, registros, onBorrar }) {
 // =====================================================================
 // Formulario de alta, uno por pestana
 // =====================================================================
-function FormRegistro({ pestana, empleado, onListo, onCancelar }) {
+function FormRegistro({ pestana, empleado, registro, onListo, onCancelar }) {
   const hoy = hoyISO();
+  const editando = Boolean(registro?.id);
 
   const iniciales = {
-    ausencias:   { fecha_desde: hoy, fecha_hasta: hoy, tipo: 'FALTA', justificada: false, con_sueldo: false, motivo: '' },
+    ausencias:   { fecha_desde: hoy, fecha_hasta: hoy, tipo: 'FALTA', justificada: false, con_sueldo: false, motivo: '', adjunto_url: null },
     horas_extra: { fecha: hoy, horas: '', recargo: 50, motivo: '', estado: 'APROBADA' },
     vacaciones:  { fecha_desde: hoy, fecha_hasta: hoy, estado: 'APROBADA', observacion: '' },
-    pagos:       { fecha_pago: hoy, periodo: periodoActual(), concepto: 'SUELDO', monto_bruto: '', descuentos: '', detalle_desc: '', metodo: 'TRANSFERENCIA', referencia: '' },
+    pagos:       { fecha_pago: hoy, periodo: periodoActual(), concepto: 'SUELDO', monto_bruto: '', descuentos: '', detalle_desc: '', metodo: 'TRANSFERENCIA', referencia: '', comprobante_url: null },
     anticipos:   { fecha: hoy, monto: '', cuotas: 1, motivo: '' },
   }[pestana];
 
-  const [f, setF] = useState(iniciales);
+  // Al editar se parte del registro real; las fechas vienen con hora y hay que recortarlas.
+  const [f, setF] = useState(() => {
+    if (!editando) return iniciales;
+    const base = { ...iniciales, ...registro };
+    for (const k of ['fecha', 'fecha_desde', 'fecha_hasta', 'fecha_pago']) {
+      if (base[k]) base[k] = String(base[k]).slice(0, 10);
+    }
+    for (const k of ['monto_bruto', 'descuentos', 'monto', 'horas']) {
+      if (base[k] !== undefined && base[k] !== null) base[k] = String(base[k]);
+    }
+    return base;
+  });
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(false);
 
@@ -315,7 +351,15 @@ function FormRegistro({ pestana, empleado, onListo, onCancelar }) {
         if (!datos.monto) throw new Error('Indica el monto.');
       }
 
-      await api.crear(pestana, datos);
+      if (editando) {
+        // Campos que pone el sistema, no el formulario.
+        for (const k of ['id', 'creado_en', 'actualizado_en', 'monto_neto', 'registrado_por', 'aprobado_por', 'aprobado_en']) {
+          delete datos[k];
+        }
+        await api.editar(pestana, registro.id, datos);
+      } else {
+        await api.crear(pestana, datos);
+      }
       onListo();
     } catch (err) {
       setError(err.message);
@@ -350,6 +394,13 @@ function FormRegistro({ pestana, empleado, onListo, onCancelar }) {
             <Check checked={f.con_sueldo} onChange={set('con_sueldo')}>Se le paga igual</Check>
           </div>
           <L t="Motivo"><textarea className="campo" rows={2} value={f.motivo} onChange={set('motivo')} /></L>
+          <Adjunto
+            empleadoId={empleado.id}
+            carpeta="ausencias"
+            etiqueta="Certificado o respaldo (opcional)"
+            valor={f.adjunto_url}
+            onCambio={(ruta) => setF({ ...f, adjunto_url: ruta })}
+          />
         </>
       )}
 
@@ -403,7 +454,9 @@ function FormRegistro({ pestana, empleado, onListo, onCancelar }) {
         <>
           <div className="grid sm:grid-cols-3 gap-3">
             <L t="Fecha de pago"><input type="date" className="campo" required value={f.fecha_pago} onChange={set('fecha_pago')} /></L>
-            <L t="Periodo"><input className="campo" value={f.periodo} onChange={set('periodo')} placeholder="2026-07" /></L>
+            <L t="Mes al que corresponde">
+              <input type="month" className="campo" value={f.periodo || ''} onChange={set('periodo')} />
+            </L>
             <L t="Concepto">
               <select className="campo" value={f.concepto} onChange={set('concepto')}>
                 {['SUELDO', 'QUINCENA', 'HORAS_EXTRA', 'DECIMO_TERCERO', 'DECIMO_CUARTO', 'FONDOS_RESERVA',
@@ -431,6 +484,13 @@ function FormRegistro({ pestana, empleado, onListo, onCancelar }) {
             <L t="Detalle del descuento"><input className="campo" value={f.detalle_desc} onChange={set('detalle_desc')} placeholder="IESS, anticipo, multa…" /></L>
             <L t="Referencia"><input className="campo" value={f.referencia} onChange={set('referencia')} placeholder="Nro de transferencia" /></L>
           </div>
+          <Adjunto
+            empleadoId={empleado.id}
+            carpeta="comprobantes"
+            etiqueta="Comprobante de la transferencia"
+            valor={f.comprobante_url}
+            onCambio={(ruta) => setF({ ...f, comprobante_url: ruta })}
+          />
         </>
       )}
 
@@ -450,7 +510,7 @@ function FormRegistro({ pestana, empleado, onListo, onCancelar }) {
       <div className="flex justify-end gap-2 pt-2">
         <button type="button" onClick={onCancelar} className="btn-suave">Cancelar</button>
         <button className="btn-primario" disabled={guardando}>
-          {guardando ? 'Guardando…' : 'Guardar'}
+          {guardando ? 'Guardando…' : editando ? 'Guardar cambios' : 'Guardar'}
         </button>
       </div>
     </form>

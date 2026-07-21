@@ -172,6 +172,7 @@ export default function MiFicha() {
                       {p.detalle_desc ? ` (${p.detalle_desc})` : ''}
                     </p>
                   )}
+                  {p.comprobante_url && <VerComprobante ruta={p.comprobante_url} />}
                 </div>
               ))
         )}
@@ -253,6 +254,35 @@ export default function MiFicha() {
         />
       </Modal>
     </div>
+  );
+}
+
+/** Abre el comprobante con un enlace firmado momentaneo. */
+function VerComprobante({ ruta }) {
+  const [abriendo, setAbriendo] = useState(false);
+
+  async function abrir() {
+    setAbriendo(true);
+    try {
+      const res = await fetch(`/api/archivos?ruta=${encodeURIComponent(ruta)}`);
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error);
+      window.open(json.url, '_blank', 'noopener');
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setAbriendo(false);
+    }
+  }
+
+  return (
+    <button
+      onClick={abrir}
+      disabled={abriendo}
+      className="mt-2 text-sm text-ind-600 hover:underline"
+    >
+      📎 {abriendo ? 'Abriendo…' : 'Ver comprobante'}
+    </button>
   );
 }
 

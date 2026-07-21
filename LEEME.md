@@ -66,8 +66,39 @@ Hazlo una sola vez, al cargar a cada persona.
 
 - **Faltas, permisos, horas extra, anticipos** → entras a la ficha de la persona
   (Equipo → clic en su nombre) y usas *+ Registrar*.
+- **Corregir algo** → clic en cualquier fila y se abre para editar. Todo registro
+  se puede corregir o borrar; queda constancia de quién lo cambió en la bitácora.
 - **Pagos** → pestaña *Pagos*. Registra lo que ya pagaste: monto, descuentos,
-  método y referencia. Exportas el mes a Excel con un botón.
+  método, referencia y **foto del comprobante**. Exportas el mes a Excel con un botón.
+
+### Cómo funcionan los pagos por mes
+
+Cada pago tiene **dos fechas distintas**, y esa es la parte que confunde:
+
+| Campo | Qué significa |
+|---|---|
+| **Fecha del pago** | El día real en que saliste la plata. |
+| **Mes al que corresponde** | El mes que estás pagando. |
+
+Casi siempre coinciden, pero no cuando pagas con desfase. Si el 3 de agosto pagas
+el sueldo de julio, pones *fecha del pago* = 3 de agosto y *mes al que corresponde*
+= julio. La pantalla de Pagos filtra por el **mes al que corresponde**, así que ese
+pago aparece en julio — que es donde tú lo buscas cuando quieres saber cuánto te
+costó julio.
+
+Si no llenas el mes, se toma solo el de la fecha de pago. Nunca queda un pago suelto.
+
+Un mismo mes puede tener varios pagos por persona (quincena + quincena, o sueldo +
+horas extra + bono). Todos se suman en el total del mes.
+
+### Comprobantes y adjuntos
+
+- En cada pago puedes adjuntar la **foto de la transferencia**; en cada falta, el
+  certificado médico. Desde el celular se abre la cámara directamente.
+- Los archivos van a un bucket **privado**. No existe un enlace público: cada vez
+  que alguien abre un comprobante, el servidor verifica el permiso y firma un
+  enlace que caduca en 5 minutos.
+- El empleado ve el comprobante de **sus** pagos desde *Mi ficha*, y de nadie más.
 - **Aprobaciones** → cuando alguien pide vacaciones desde su celular, cae ahí.
   Te muestra si le alcanza el saldo antes de que apruebes.
 - **Los empleados** entran a la misma URL con su cédula y PIN, y caen

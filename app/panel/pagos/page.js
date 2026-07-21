@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import { Avatar, Aviso, Cargando, Chip, Metrica, Modal, Vacio } from '@/components/ui';
+import Adjunto from '@/components/Adjunto';
 import { fecha, money, periodo, periodoActual, hoyISO } from '@/lib/fmt';
 
 const CONCEPTOS = [
@@ -15,13 +16,15 @@ export default function Pagos() {
   const [pagos, setPagos] = useState(null);
   const [equipo, setEquipo] = useState([]);
   const [error, setError] = useState('');
-  const [nuevo, setNuevo] = useState(false);
+  const [editando, setEditando] = useState(null); // pago | 'nuevo' | null
 
   async function cargar() {
     setPagos(null);
     try {
+      // Se filtra por el MES AL QUE CORRESPONDE el pago, no por la fecha en que
+      // se hizo: un sueldo de julio pagado el 3 de agosto sigue siendo de julio.
       const [p, e] = await Promise.all([
-        api.listar('pagos', { desde: `${mes}-01`, hasta: `${mes}-31` }),
+        api.listar('pagos', { periodo: mes }),
         api.listar('empleados'),
       ]);
       setPagos(p);
@@ -75,12 +78,14 @@ export default function Pagos() {
       <div className="flex items-end justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Pagos</h1>
-          <p className="text-sm text-slate-500 capitalize">{periodo(mes)}</p>
+          <p className="text-sm text-slate-500">
+            Pagos correspondientes a <span className="capitalize font-medium">{periodo(mes)}</span>
+          </p>
         </div>
         <div className="flex gap-2 flex-wrap">
           <input type="month" className="campo !w-auto" value={mes} onChange={(e) => setMes(e.target.value)} />
           <button onClick={exportarCSV} className="btn-suave" disabled={!pagos?.length}>⬇ Excel</button>
-          <button onClick={() => setNuevo(true)} className="btn-primario">+ Registrar pago</button>
+          <button onClick={() => setEditando('nuevo')} className="btn-primario">+ Registrar pago</button>
         </div>
       </div>
 
@@ -119,8 +124,16 @@ export default function Pagos() {
                 {pagos.map((p) => {
                   const e = quien(p.empleado_id);
                   return (
-                    <tr key={p.id} className="hover:bg-slate-50">
-                      <td className="td whitespace-nowrap">{fecha(p.fecha_pago)}</td>
+                    <tr
+                      key={p.id}
+                      onClick={() => setEditando(p)}
+                      className="hover:bg-ind-50/50 cursor-pointer"
+                      title="Clic para editar"
+                    >
+                      <td className="td whitespace-nowrap">
+                        {p.comprobante_url && <span title="Tiene comprobante">📎 </span>}
+                        {fecha(p.fecha_pago)}
+                      </td>
                       <td className="td">
                         <div className="flex items-center gap-2">
                           <Avatar empleado={e} size={30} />
@@ -152,22 +165,41 @@ export default function Pagos() {
         )}
       </div>
 
-      <Modal abierto={nuevo} titulo="Registrar pago" onCerrar={() => setNuevo(false)}>
+      <Modal
+        abierto={Boolean(editando)}
+        titulo={editando === 'nuevo' ? 'Registrar pago' : 'Editar pago'}
+        onCerrar={() => setEditando(null)}
+      >
         <FormPago
           equipo={equipo.filter((e) => e.estado !== 'INACTIVO')}
           mes={mes}
-          onCancelar={() => setNuevo(false)}
-          onListo={() => { setNuevo(false); cargar(); }}
+          pago={editando === 'nuevo' ? null : editando}
+          onCancelar={() => setEditando(null)}
+          onBorrado={() => { setEditando(null); cargar(); }}
+          onListo={() => { setEditando(null); cargar(); }}
         />
       </Modal>
     </div>
   );
 }
 
-function FormPago({ equipo, mes, onListo, onCancelar }) {
-  const [f, setF] = useState({
-    empleado_id: '', fecha_pago: hoyISO(), periodo: mes, concepto: 'SUELDO',
-    monto_bruto: '', descuentos: '', detalle_desc: '', metodo: 'TRANSFERENCIA', referencia: '',
+function FormPago({ equipo, mes, pago, onListo, onCancelar, onBorrado }) {
+  const editando = Boolean(pago?.id);
+
+  const [f, setF] = useState(() => {
+    const base = {
+      empleado_id: '', fecha_pago: hoyISO(), periodo: mes, concepto: 'SUELDO',
+      monto_bruto: '', descuentos: '', detalle_desc: '', metodo: 'TRANSFERENCIA',
+      referencia: '', comprobante_url: null,
+    };
+    if (!editando) return base;
+    return {
+      ...base,
+      ...pago,
+      fecha_pago: String(pago.fecha_pago).slice(0, 10),
+      monto_bruto: String(pago.monto_bruto ?? ''),
+      descuentos: String(pago.descuentos ?? ''),
+    };
   });
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(false);
@@ -192,15 +224,36 @@ function FormPago({ equipo, mes, onListo, onCancelar }) {
 
     setGuardando(true);
     try {
-      await api.crear('pagos', {
+      const datos = {
         ...f,
         monto_bruto: Number(f.monto_bruto || 0),
         descuentos: Number(f.descuentos || 0),
-      });
+      };
+
+      if (editando) {
+        for (const k of ['id', 'creado_en', 'actualizado_en', 'monto_neto', 'registrado_por']) {
+          delete datos[k];
+        }
+        await api.editar('pagos', pago.id, datos);
+      } else {
+        await api.crear('pagos', datos);
+      }
       onListo();
     } catch (err) {
       setError(err.message);
     } finally {
+      setGuardando(false);
+    }
+  }
+
+  async function borrar() {
+    if (!confirm('¿Borrar este pago? No se puede deshacer.')) return;
+    setGuardando(true);
+    try {
+      await api.borrar('pagos', pago.id);
+      onBorrado();
+    } catch (err) {
+      setError(err.message);
       setGuardando(false);
     }
   }
@@ -211,7 +264,7 @@ function FormPago({ equipo, mes, onListo, onCancelar }) {
     <form onSubmit={guardar} className="space-y-4">
       <div>
         <label className="etiqueta">Empleado</label>
-        <select className="campo" required value={f.empleado_id} onChange={elegir}>
+        <select className="campo" required value={f.empleado_id} onChange={elegir} disabled={editando}>
           <option value="">— elige a la persona —</option>
           {equipo.map((e) => (
             <option key={e.id} value={e.id}>{e.apellidos} {e.nombres} · {e.cargo || ''}</option>
@@ -221,12 +274,12 @@ function FormPago({ equipo, mes, onListo, onCancelar }) {
 
       <div className="grid sm:grid-cols-3 gap-3">
         <div>
-          <label className="etiqueta">Fecha</label>
+          <label className="etiqueta">Fecha del pago</label>
           <input type="date" className="campo" required value={f.fecha_pago} onChange={set('fecha_pago')} />
         </div>
         <div>
-          <label className="etiqueta">Periodo</label>
-          <input className="campo" value={f.periodo} onChange={set('periodo')} placeholder="2026-07" />
+          <label className="etiqueta">Mes al que corresponde</label>
+          <input type="month" className="campo" value={f.periodo || ''} onChange={set('periodo')} />
         </div>
         <div>
           <label className="etiqueta">Concepto</label>
@@ -269,13 +322,29 @@ function FormPago({ equipo, mes, onListo, onCancelar }) {
         </div>
       </div>
 
+      <Adjunto
+        empleadoId={f.empleado_id}
+        carpeta="comprobantes"
+        etiqueta="Comprobante de la transferencia"
+        valor={f.comprobante_url}
+        onCambio={(ruta) => setF({ ...f, comprobante_url: ruta })}
+      />
+
       <Aviso>{error}</Aviso>
 
-      <div className="flex justify-end gap-2 pt-2">
-        <button type="button" onClick={onCancelar} className="btn-suave">Cancelar</button>
-        <button className="btn-primario" disabled={guardando}>
-          {guardando ? 'Guardando…' : 'Registrar pago'}
-        </button>
+      <div className="flex justify-between gap-2 pt-2">
+        {editando ? (
+          <button type="button" onClick={borrar} className="btn-peligro" disabled={guardando}>
+            Borrar pago
+          </button>
+        ) : <span />}
+
+        <div className="flex gap-2">
+          <button type="button" onClick={onCancelar} className="btn-suave">Cancelar</button>
+          <button className="btn-primario" disabled={guardando}>
+            {guardando ? 'Guardando…' : editando ? 'Guardar cambios' : 'Registrar pago'}
+          </button>
+        </div>
       </div>
     </form>
   );
