@@ -9,6 +9,7 @@ const ENLACES = [
   { href: '/panel',               texto: 'Resumen',      icono: '📊', exacto: true },
   { href: '/panel/empleados',     texto: 'Equipo',       icono: '👥' },
   { href: '/panel/aprobaciones',  texto: 'Aprobaciones', icono: '✅' },
+  { href: '/panel/por-pagar',     texto: 'Por pagar',    icono: '🧮' },
   { href: '/panel/pagos',         texto: 'Pagos',        icono: '💵' },
 ];
 
