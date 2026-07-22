@@ -324,7 +324,7 @@ function FormRegistro({ pestana, empleado, registro, onListo, onCancelar }) {
 
   const iniciales = {
     ausencias:   { fecha_desde: hoy, fecha_hasta: hoy, tipo: 'FALTA', justificada: false, con_sueldo: false, motivo: '', adjunto_url: null },
-    horas_extra: { fecha: hoy, horas: '', recargo: 50, motivo: '', estado: 'APROBADA' },
+    horas_extra: { fecha: hoy, horas: '', recargo: 50, valor_total: '', motivo: '', estado: 'APROBADA' },
     vacaciones:  { fecha_desde: hoy, fecha_hasta: hoy, estado: 'APROBADA', observacion: '' },
     pagos:       { fecha_pago: hoy, periodo: periodoActual(), concepto: 'SUELDO', monto_bruto: '', descuentos: '', detalle_desc: '', metodo: 'TRANSFERENCIA', referencia: '', comprobante_url: null },
     anticipos:   { fecha: hoy, monto: '', cuotas: 1, motivo: '' },
@@ -368,7 +368,10 @@ function FormRegistro({ pestana, empleado, registro, onListo, onCancelar }) {
         datos.horas = Number(f.horas);
         if (!datos.horas) throw new Error('Indica cuantas horas.');
         datos.valor_hora = Number(valorHora.toFixed(4));
-        datos.valor_total = Number((datos.horas * valorHora * (1 + Number(f.recargo) / 100)).toFixed(2));
+        // El valor a pagar lo decides tu: si lo dejaste vacio, usa la sugerencia.
+        datos.valor_total = f.valor_total === '' || f.valor_total == null
+          ? Number((datos.horas * valorHora * (1 + Number(f.recargo) / 100)).toFixed(2))
+          : Number(f.valor_total);
       }
 
       if (pestana === 'pagos') {
@@ -449,17 +452,19 @@ function FormRegistro({ pestana, empleado, registro, onListo, onCancelar }) {
               </select>
             </L>
           </div>
-          <div className="rounded-xl bg-slate-50 p-3 text-sm">
-            <p className="text-slate-500">
-              Hora base: <b>{money(valorHora)}</b> (sueldo ÷ 240 h)
-            </p>
-            <p className="text-slate-800 font-semibold mt-0.5">A pagar: {money(total)}</p>
-            {!empleado.sueldo_base && (
-              <p className="text-amber-600 mt-1">
-                Este empleado no tiene sueldo cargado, por eso el valor sale en cero.
-              </p>
-            )}
-          </div>
+          <L t="Valor a pagar">
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+              <input
+                type="number" step="0.01" className="campo pl-6"
+                value={f.valor_total === '' || f.valor_total == null ? total.toFixed(2) : f.valor_total}
+                onChange={set('valor_total')}
+              />
+            </div>
+          </L>
+          <p className="text-xs text-slate-400">
+            Sugerido {money(total)} (sueldo ÷ 240 × recargo). Puedes poner el monto que decidas.
+          </p>
           <L t="Motivo"><input className="campo" value={f.motivo} onChange={set('motivo')} placeholder="Cierre de pedido, inventario…" /></L>
         </>
       )}

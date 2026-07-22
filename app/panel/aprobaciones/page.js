@@ -20,10 +20,10 @@ export default function Aprobaciones() {
 
   useEffect(() => { cargar(); }, []);
 
-  async function resolver(recurso, registro, estado) {
+  async function resolver(recurso, registro, estado, extra = {}) {
     setProcesando(registro.id);
     try {
-      await api.editar(recurso, registro.id, { estado });
+      await api.editar(recurso, registro.id, { estado, ...extra });
       await cargar();
     } catch (e) {
       alert(e.message);
@@ -99,34 +99,86 @@ export default function Aprobaciones() {
             ⏱️ Horas extra ({extras.length})
           </h2>
           <ul className="divide-y divide-slate-100">
-            {extras.map((h) => {
-              const emp = quien(h.empleado_id);
-              return (
-                <li key={h.id} className="p-4 flex flex-wrap items-center gap-4">
-                  <Avatar empleado={emp} size={42} />
-                  <div className="flex-1 min-w-[200px]">
-                    <p className="font-medium text-slate-800">
-                      {emp?.nombres} {emp?.apellidos}
-                    </p>
-                    <p className="text-sm text-slate-500">
-                      {fecha(h.fecha)} · <b>{dias(h.horas)} h</b> con recargo del {h.recargo}%
-                      {h.valor_total ? ` · ${money(h.valor_total)}` : ''}
-                    </p>
-                    {h.motivo && <p className="text-sm text-slate-500 italic mt-1">“{h.motivo}”</p>}
-                    <p className="text-xs text-slate-400 mt-1">Solicitada el {fechaHora(h.creado_en)}</p>
-                  </div>
-                  <Botones
-                    cargando={procesando === h.id}
-                    onAprobar={() => resolver('horas_extra', h, 'APROBADA')}
-                    onRechazar={() => resolver('horas_extra', h, 'RECHAZADA')}
-                  />
-                </li>
-              );
-            })}
+            {extras.map((h) => (
+              <FilaExtra
+                key={h.id}
+                extra={h}
+                emp={quien(h.empleado_id)}
+                cargando={procesando === h.id}
+                onAprobar={(datos) => resolver('horas_extra', h, 'APROBADA', datos)}
+                onRechazar={() => resolver('horas_extra', h, 'RECHAZADA')}
+              />
+            ))}
           </ul>
         </section>
       )}
     </div>
+  );
+}
+
+// Al aprobar horas extra, el jefe/admin fija el recargo y el valor a pagar
+// (el empleado solo declaro las horas). Se pre-llena una sugerencia calculada
+// con el sueldo, pero es totalmente editable: tu decides el monto.
+function FilaExtra({ extra: h, emp, cargando, onAprobar, onRechazar }) {
+  const valorHora = Number(emp?.sueldo_base || 0) / 240;
+  const [recargo, setRecargo] = useState(50);
+  const sugerido = (Number(h.horas) * valorHora * (1 + recargo / 100)).toFixed(2);
+  const [valor, setValor] = useState('');
+
+  // El valor sugerido sigue al recargo mientras el usuario no lo haya tecleado.
+  const valorEfectivo = valor === '' ? sugerido : valor;
+
+  return (
+    <li className="p-4">
+      <div className="flex flex-wrap items-start gap-4">
+        <Avatar empleado={emp} size={42} />
+        <div className="flex-1 min-w-[200px]">
+          <p className="font-medium text-slate-800">{emp?.nombres} {emp?.apellidos}</p>
+          <p className="text-sm text-slate-500">
+            {fecha(h.fecha)} · declaró <b>{dias(h.horas)} h</b> extra
+          </p>
+          {h.motivo && <p className="text-sm text-slate-500 italic mt-1">“{h.motivo}”</p>}
+          <p className="text-xs text-slate-400 mt-1">Solicitada el {fechaHora(h.creado_en)}</p>
+        </div>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-end gap-3 bg-slate-50 rounded-xl p-3">
+        <div>
+          <label className="etiqueta">Recargo</label>
+          <select className="campo !w-auto" value={recargo} onChange={(e) => setRecargo(Number(e.target.value))}>
+            <option value={25}>25%</option>
+            <option value={50}>50%</option>
+            <option value={100}>100%</option>
+          </select>
+        </div>
+        <div>
+          <label className="etiqueta">Valor a pagar</label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+            <input
+              type="number" step="0.01" className="campo !w-36 pl-6"
+              value={valorEfectivo}
+              onChange={(e) => setValor(e.target.value)}
+            />
+          </div>
+        </div>
+        {emp?.sueldo_base > 0 && (
+          <p className="text-xs text-slate-400 pb-2.5">
+            Sugerido: {money(sugerido)} (sueldo ÷ 240)
+          </p>
+        )}
+        <div className="flex gap-2 ml-auto pb-0.5">
+          <button onClick={onRechazar} disabled={cargando} className="btn-peligro">Rechazar</button>
+          <button
+            onClick={() => onAprobar({ recargo, valor_total: Number(valorEfectivo) || 0, valor_hora: Number(valorHora.toFixed(4)) })}
+            disabled={cargando}
+            className="btn-ok"
+          >
+            {cargando ? '…' : 'Aprobar'}
+          </button>
+        </div>
+      </div>
+    </li>
   );
 }
 

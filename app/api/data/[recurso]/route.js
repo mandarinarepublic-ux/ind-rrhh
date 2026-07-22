@@ -126,28 +126,18 @@ function empleadoPuedeCrear(recurso, sesion, datos) {
   return RECURSOS_QUE_EL_EMPLEADO_SOLICITA.includes(recurso) && datos.empleado_id === sesion.id;
 }
 
-/**
- * Valor de la hora extra, calculado SIEMPRE en el servidor a partir del sueldo
- * real del empleado. Asi el empleado no puede inflar el monto al solicitarla,
- * ni depende de lo que mande el navegador.
- *   valor = horas × (sueldo_base / 240) × (1 + recargo/100)
- */
-async function calcularValorExtra(sb, empleadoId, horas, recargo) {
-  const { data } = await sb.from('empleados').select('sueldo_base').eq('id', empleadoId).maybeSingle();
-  const valorHora = Number(data?.sueldo_base || 0) / 240;
-  return {
-    valor_hora: Number(valorHora.toFixed(4)),
-    valor_total: Number((Number(horas) * valorHora * (1 + Number(recargo) / 100)).toFixed(2)),
-  };
-}
+// Campos que un jefe puede tocar al resolver una solicitud de su equipo.
+// En vacaciones solo el estado; en horas extra ademas fija el valor a pagar
+// (el empleado solo declaro las horas; quien aprueba pone el monto).
+const CAMPOS_APROBACION = {
+  vacaciones: ['estado', 'observacion', 'motivo'],
+  horas_extra: ['estado', 'observacion', 'motivo', 'recargo', 'valor_hora', 'valor_total'],
+};
 
 function jefePuedeAprobar(recurso, campos) {
+  const permitidos = CAMPOS_APROBACION[recurso];
   const claves = Object.keys(campos);
-  return (
-    ['vacaciones', 'horas_extra'].includes(recurso) &&
-    claves.length > 0 &&
-    claves.every((k) => k === 'estado' || k === 'observacion' || k === 'motivo')
-  );
+  return Boolean(permitidos) && claves.length > 0 && claves.every((k) => permitidos.includes(k));
 }
 
 // =======================================================================
@@ -234,12 +224,10 @@ export async function POST(req, { params }) {
       datos.estado = 'PENDIENTE';
     }
 
-    // El valor de la hora extra lo calcula el servidor con el sueldo real.
-    if (params.recurso === 'horas_extra' && datos.horas && datos.recargo) {
-      const empId = datos.empleado_id || sesion.id;
-      const { valor_hora, valor_total } = await calcularValorExtra(sb, empId, datos.horas, datos.recargo);
-      datos.valor_hora = valor_hora;
-      datos.valor_total = valor_total;
+    // El empleado solo declara las horas: el valor lo pone quien aprueba.
+    if (params.recurso === 'horas_extra' && loPideElEmpleado) {
+      datos.valor_hora = null;
+      datos.valor_total = null;
     }
 
     if (params.recurso === 'empleados' && body.pin) {

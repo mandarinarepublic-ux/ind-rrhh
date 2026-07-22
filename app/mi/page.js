@@ -312,7 +312,7 @@ export default function MiFicha() {
 }
 
 function FormExtra({ empleadoId, onListo, onCancelar }) {
-  const [f, setF] = useState({ fecha: hoyISO(), horas: '', recargo: 50, motivo: '' });
+  const [f, setF] = useState({ fecha: hoyISO(), horas: '', motivo: '' });
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
 
@@ -325,12 +325,12 @@ function FormExtra({ empleadoId, onListo, onCancelar }) {
 
     setEnviando(true);
     try {
-      // El valor y el estado (PENDIENTE) los pone el servidor.
+      // El empleado solo declara las horas. El estado (PENDIENTE) y el valor
+      // los define quien aprueba.
       await api.crear('horas_extra', {
         empleado_id: empleadoId,
         fecha: f.fecha,
         horas: Number(f.horas),
-        recargo: Number(f.recargo),
         motivo: f.motivo,
       });
       onListo();
@@ -349,18 +349,9 @@ function FormExtra({ empleadoId, onListo, onCancelar }) {
           <input type="date" className="campo" required value={f.fecha} onChange={set('fecha')} />
         </div>
         <div>
-          <label className="etiqueta">Cuántas horas</label>
+          <label className="etiqueta">Cuántas horas extra</label>
           <input type="number" step="0.5" min="0.5" className="campo" required value={f.horas} onChange={set('horas')} placeholder="Ej: 3" />
         </div>
-      </div>
-
-      <div>
-        <label className="etiqueta">Tipo de recargo</label>
-        <select className="campo" value={f.recargo} onChange={set('recargo')}>
-          <option value={25}>25% — hasta medianoche entre semana</option>
-          <option value={50}>50% — en la noche</option>
-          <option value={100}>100% — fin de semana o feriado</option>
-        </select>
       </div>
 
       <div>
@@ -369,8 +360,8 @@ function FormExtra({ empleadoId, onListo, onCancelar }) {
       </div>
 
       <div className="rounded-xl bg-slate-50 p-3 text-xs text-slate-500">
-        Se registrará <b>la fecha y hora exactas</b> de esta solicitud. Tu jefe la revisa y la
-        aprueba; el monto lo calcula el sistema con tu sueldo.
+        Solo registra <b>las horas que trabajaste de más</b>. Queda anotada la fecha y hora
+        exactas de tu solicitud. Tu jefe la revisa, la aprueba y define el pago.
       </div>
 
       <Aviso>{error}</Aviso>
