@@ -20,10 +20,10 @@ export default function PorPagar() {
 
   function exportarCSV() {
     const filas = [
-      ['Empleado', 'Cargo', 'Meses', 'Sueldo acumulado', 'Pagado', 'Falta sueldo', 'Extras por pagar', 'Anticipo', 'TOTAL POR PAGAR'],
+      ['Empleado', 'Cargo', 'Meses', 'Sueldo acumulado', 'No trabajado', 'Pagado', 'Falta sueldo', 'Extras por pagar', 'Anticipo', 'TOTAL POR PAGAR'],
       ...datos.filas.map((f) => [
         `${f.empleado.nombres} ${f.empleado.apellidos}`, f.empleado.cargo || '', f.meses,
-        f.sueldo_acumulado, f.pagado_sueldo, f.falta_sueldo,
+        f.sueldo_acumulado, f.descuento_faltas, f.pagado_sueldo, f.falta_sueldo,
         f.extras_por_pagar, f.anticipo_saldo, f.total_por_pagar,
       ]),
     ];
@@ -79,6 +79,7 @@ export default function PorPagar() {
                     <tr>
                       <th className="th">Persona</th>
                       <th className="th text-right">Sueldo acumulado</th>
+                      <th className="th text-right">No trabajado</th>
                       <th className="th text-right">Pagado</th>
                       <th className="th text-right">Falta sueldo</th>
                       <th className="th text-right">Extras</th>
@@ -108,6 +109,11 @@ export default function PorPagar() {
                             </span>
                           )}
                         </td>
+                        <td className="td text-right">
+                          {f.descuento_faltas > 0
+                            ? <span className="text-rose-600">−{money(f.descuento_faltas)}</span>
+                            : <span className="text-slate-300">—</span>}
+                        </td>
                         <td className="td text-right text-slate-500">{money(f.pagado_sueldo)}</td>
                         <td className="td text-right">
                           {f.falta_sueldo < 0
@@ -135,7 +141,7 @@ export default function PorPagar() {
                   <tfoot className="bg-slate-50 font-bold">
                     <tr>
                       <td className="td">Total nómina</td>
-                      <td className="td" colSpan={5}></td>
+                      <td className="td" colSpan={6}></td>
                       <td className="td text-right text-rose-700">{money(datos.totales.total)}</td>
                     </tr>
                   </tfoot>

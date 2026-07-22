@@ -323,7 +323,7 @@ function FormRegistro({ pestana, empleado, registro, onListo, onCancelar }) {
   const editando = Boolean(registro?.id);
 
   const iniciales = {
-    ausencias:   { fecha_desde: hoy, fecha_hasta: hoy, tipo: 'FALTA', justificada: false, con_sueldo: false, motivo: '', adjunto_url: null },
+    ausencias:   { fecha_desde: hoy, fecha_hasta: hoy, tipo: 'FALTA', justificada: false, con_sueldo: false, descuento: '', motivo: '', adjunto_url: null },
     horas_extra: { fecha: hoy, horas: '', recargo: 50, valor_total: '', motivo: '', estado: 'APROBADA' },
     vacaciones:  { fecha_desde: hoy, fecha_hasta: hoy, estado: 'APROBADA', observacion: '' },
     pagos:       { fecha_pago: hoy, periodo: periodoActual(), concepto: 'SUELDO', monto_bruto: '', descuentos: '', detalle_desc: '', metodo: 'TRANSFERENCIA', referencia: '', comprobante_url: null },
@@ -362,6 +362,9 @@ function FormRegistro({ pestana, empleado, registro, onListo, onCancelar }) {
       if (pestana === 'ausencias' || pestana === 'vacaciones') {
         datos.dias = diasEntre(f.fecha_desde, f.fecha_hasta);
         if (!datos.dias) throw new Error('El rango de fechas no es valido.');
+      }
+      if (pestana === 'ausencias') {
+        datos.descuento = f.con_sueldo ? 0 : Number(f.descuento || 0);
       }
 
       if (pestana === 'horas_extra') {
@@ -428,6 +431,21 @@ function FormRegistro({ pestana, empleado, registro, onListo, onCancelar }) {
             <Check checked={f.justificada} onChange={set('justificada')}>Justificada</Check>
             <Check checked={f.con_sueldo} onChange={set('con_sueldo')}>Se le paga igual</Check>
           </div>
+          {!f.con_sueldo && (
+            <L t="Descuento por no trabajar">
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                <input
+                  type="number" step="0.01" min="0" className="campo pl-6"
+                  value={f.descuento} onChange={set('descuento')}
+                  placeholder="0.00"
+                />
+              </div>
+              <p className="mt-1 text-xs text-slate-400">
+                Cuánto se le baja del sueldo por este día no trabajado. Se resta de lo que le debes.
+              </p>
+            </L>
+          )}
           <L t="Motivo"><textarea className="campo" rows={2} value={f.motivo} onChange={set('motivo')} /></L>
           <Adjunto
             empleadoId={empleado.id}

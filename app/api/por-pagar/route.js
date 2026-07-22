@@ -51,7 +51,7 @@ export async function GET(req) {
     const alcance = await alcanceEmpleados(sesion);
     const acotar = (q, col) => (alcance ? q.in(col, alcance) : q);
 
-    const [empleadosR, pagosSueldoR, pagosExtraR, extrasR, anticiposR, abonosR] = await Promise.all([
+    const [empleadosR, pagosSueldoR, pagosExtraR, extrasR, anticiposR, abonosR, faltasR] = await Promise.all([
       acotar(
         sb.from('empleados')
           .select('id, nombres, apellidos, cargo, area, sueldo_base, foto_url, nomina_desde')
@@ -82,9 +82,15 @@ export async function GET(req) {
         'empleado_id'
       ),
       sb.from('anticipo_abonos').select('anticipo_id, monto').lte('fecha', finMes),
+      // descuentos por dias no trabajados, hasta el cierre del mes
+      acotar(
+        sb.from('ausencias').select('empleado_id, fecha_desde, descuento')
+          .gt('descuento', 0).lte('fecha_desde', finMes),
+        'empleado_id'
+      ),
     ]);
 
-    for (const r of [empleadosR, pagosSueldoR, pagosExtraR, extrasR, anticiposR, abonosR]) {
+    for (const r of [empleadosR, pagosSueldoR, pagosExtraR, extrasR, anticiposR, abonosR, faltasR]) {
       if (r.error) throw r.error;
     }
 
@@ -99,6 +105,12 @@ export async function GET(req) {
     for (const p of pagosSueldoR.data || []) {
       sueldoPagado[p.empleado_id] = sueldoPagado[p.empleado_id] || { total: 0, filas: [] };
       sueldoPagado[p.empleado_id].filas.push(p);
+    }
+
+    // Descuentos por faltas, agrupados por empleado (el filtro por ancla va en JS).
+    const faltasPorEmp = {};
+    for (const a of faltasR.data || []) {
+      (faltasPorEmp[a.empleado_id] ||= []).push(a);
     }
 
     const extraPagado = sumaPor(pagosExtraR.data, 'empleado_id', 'monto_bruto');
@@ -134,7 +146,16 @@ export async function GET(req) {
         pagosEmp.filter((p) => p.periodo >= anclaMes).reduce((s, p) => s + Number(p.monto_bruto || 0), 0)
       );
 
-      const faltaSueldo = r2(sueldoAcumulado - pagadoSueldo);
+      // Dias no trabajados: descuentos de faltas desde el ancla hasta el mes.
+      const faltasEmp = faltasPorEmp[e.id] || [];
+      const descuentoFaltas = r2(
+        faltasEmp
+          .filter((a) => String(a.fecha_desde).slice(0, 7) >= anclaMes)
+          .reduce((s, a) => s + Number(a.descuento || 0), 0)
+      );
+
+      // Lo que se le debe de sueldo baja por lo pagado Y por lo no trabajado.
+      const faltaSueldo = r2(sueldoAcumulado - descuentoFaltas - pagadoSueldo);
       const extrasPorPagar = r2(Math.max(0, (extraGanado[e.id] || 0) - (extraPagado[e.id] || 0)));
       const anticipoSaldo = r2(Math.max(0, (anticipoEmitido[e.id] || 0) - (anticipoAbonado[e.id] || 0)));
 
@@ -149,6 +170,7 @@ export async function GET(req) {
         nomina_desde: anclaMes,
         sueldo_base: base,
         sueldo_acumulado: sueldoAcumulado,
+        descuento_faltas: descuentoFaltas,
         pagado_sueldo: pagadoSueldo,
         falta_sueldo: faltaSueldo,
         extras_por_pagar: extrasPorPagar,
@@ -162,10 +184,11 @@ export async function GET(req) {
         acc.sueldos += Math.max(0, f.falta_sueldo);
         acc.extras += f.extras_por_pagar;
         acc.anticipos += f.anticipo_saldo;
+        acc.descuentos += f.descuento_faltas;
         acc.total += Math.max(0, f.total_por_pagar);
         return acc;
       },
-      { sueldos: 0, extras: 0, anticipos: 0, total: 0 }
+      { sueldos: 0, extras: 0, anticipos: 0, descuentos: 0, total: 0 }
     );
     for (const k in totales) totales[k] = r2(totales[k]);
 

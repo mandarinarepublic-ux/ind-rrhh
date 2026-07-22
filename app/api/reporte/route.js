@@ -47,7 +47,7 @@ export async function GET(req) {
     const alcance = await alcanceEmpleados(sesion);
     const acotar = (q, col) => (alcance ? q.in(col, alcance) : q);
 
-    const [empleadosR, pagosR, extrasR, anticiposR] = await Promise.all([
+    const [empleadosR, pagosR, extrasR, anticiposR, faltasR] = await Promise.all([
       acotar(
         sb.from('empleados')
           .select('id, nombres, apellidos, cargo, area, foto_url, sueldo_base, nomina_desde, estado, fecha_salida')
@@ -57,9 +57,10 @@ export async function GET(req) {
       acotar(sb.from('pagos').select('empleado_id, concepto, periodo, monto_bruto, monto_neto'), 'empleado_id'),
       acotar(sb.from('horas_extra').select('empleado_id, valor_total').in('estado', ['APROBADA', 'PAGADA']), 'empleado_id'),
       acotar(sb.from('vw_anticipos_saldo').select('empleado_id, saldo'), 'empleado_id'),
+      acotar(sb.from('ausencias').select('empleado_id, fecha_desde, descuento').gt('descuento', 0), 'empleado_id'),
     ]);
 
-    for (const r of [empleadosR, pagosR, extrasR, anticiposR]) {
+    for (const r of [empleadosR, pagosR, extrasR, anticiposR, faltasR]) {
       if (r.error) throw r.error;
     }
 
@@ -74,6 +75,7 @@ export async function GET(req) {
 
     const extraGanado = sumaPor(extrasR.data || [], 'valor_total');
     const anticipoSaldo = sumaPor(anticiposR.data || [], 'saldo');
+    const descuentoFaltas = sumaPor(faltasR.data || [], 'descuento');
 
     // Pagos agrupados por empleado y clase.
     const pagoEmp = {};
@@ -92,7 +94,9 @@ export async function GET(req) {
       const ancla = String(e.nomina_desde).slice(0, 7);
       const meses = mesesInclusive(ancla, mesActual);
 
-      const sueldoDevengado = r2(base * meses);
+      // Lo devengado de sueldo baja por los dias no trabajados.
+      const descuento = r2(descuentoFaltas[e.id] || 0);
+      const sueldoDevengado = r2(base * meses - descuento);
       const extras = r2(extraGanado[e.id] || 0);
       const devengado = r2(sueldoDevengado + extras);
 
@@ -108,6 +112,7 @@ export async function GET(req) {
       return {
         empleado: { id: e.id, nombres: e.nombres, apellidos: e.apellidos, cargo: e.cargo, area: e.area, foto_url: e.foto_url, estado: e.estado },
         meses,
+        descuento,
         devengado,
         pagado: pagadoObligacion,
         otros_pagos: otrosPagos,
@@ -130,20 +135,29 @@ export async function GET(req) {
       pagadoPorMes[p.periodo] = (pagadoPorMes[p.periodo] || 0) + Number(p.monto_bruto || 0);
     }
 
+    // descuentos por dias no trabajados, por mes de la falta
+    const descuentoPorMes = {};
+    for (const a of faltasR.data || []) {
+      const mes = String(a.fecha_desde).slice(0, 7);
+      descuentoPorMes[mes] = (descuentoPorMes[mes] || 0) + Number(a.descuento || 0);
+    }
+
     let saldoAcum = 0;
     const porMes = meses.map((mes) => {
-      // nomina teorica del mes: quien ya arranco y no ha salido antes del mes
-      const devengado = empleados.reduce((s, e) => {
+      // nomina teorica del mes: quien ya arranco y no ha salido antes del mes,
+      // menos lo no trabajado ese mes
+      const bruto = empleados.reduce((s, e) => {
         const ancla = String(e.nomina_desde).slice(0, 7);
         if (ancla > mes) return s;
         const salida = e.fecha_salida ? String(e.fecha_salida).slice(0, 7) : null;
         if (salida && salida < mes) return s;
         return s + Number(e.sueldo_base || 0);
       }, 0);
+      const devengado = r2(bruto - (descuentoPorMes[mes] || 0));
       const pagado = pagadoPorMes[mes] || 0;
       const saldoMes = r2(devengado - pagado);
       saldoAcum = r2(saldoAcum + saldoMes);
-      return { periodo: mes, devengado: r2(devengado), pagado: r2(pagado), saldo_mes: saldoMes, saldo_acumulado: saldoAcum };
+      return { periodo: mes, devengado, pagado: r2(pagado), saldo_mes: saldoMes, saldo_acumulado: saldoAcum };
     });
 
     // ---------- totales ----------
