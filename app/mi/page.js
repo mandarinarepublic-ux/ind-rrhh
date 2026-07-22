@@ -201,7 +201,7 @@ export default function MiFicha() {
             <div className="tarjeta p-4 flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">
-                  Horas extra aprobadas este anio
+                  Horas extra aprobadas este año
                 </p>
                 <p className="text-2xl font-bold text-slate-800">
                   {dias(d.extras.filter((h) => ['APROBADA', 'PAGADA'].includes(h.estado)).reduce((s, h) => s + Number(h.horas), 0))} h
@@ -253,7 +253,7 @@ export default function MiFicha() {
 
         {vista === 'faltas' && (
           d.ausencias.length === 0
-            ? <div className="tarjeta"><Vacio icono="🎉" titulo="Asistencia perfecta" detalle="Sin faltas ni permisos este anio." /></div>
+            ? <div className="tarjeta"><Vacio icono="🎉" titulo="Asistencia perfecta" detalle="Sin faltas ni permisos este año." /></div>
             : d.ausencias.map((a) => (
                 <div key={a.id} className="tarjeta p-4 flex justify-between items-center gap-3">
                   <div>
