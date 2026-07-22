@@ -43,7 +43,7 @@ export default function Login() {
     setError('');
 
     if (nuevo.pin !== nuevo.pin2) return setError('Los dos PIN no coinciden.');
-    if (!/^\d{6}$/.test(nuevo.pin)) return setError('El PIN debe ser de 6 digitos.');
+    if (!/^\d{6}$/.test(nuevo.pin)) return setError('El PIN debe ser de 6 dígitos.');
 
     setEnviando(true);
     try {
@@ -82,7 +82,7 @@ export default function Login() {
               <div>
                 <h2 className="font-semibold text-slate-800">Crear administrador</h2>
                 <p className="text-sm text-slate-500 mt-1">
-                  No hay nadie registrado todavia. Esta primera cuenta sera la de administracion.
+                  No hay nadie registrado todavía. Esta primera cuenta será la de administración.
                 </p>
               </div>
 
@@ -104,7 +104,7 @@ export default function Login() {
               </div>
 
               <div>
-                <label className="etiqueta">Cedula</label>
+                <label className="etiqueta">Cédula</label>
                 <input
                   className="campo" required inputMode="numeric" value={nuevo.cedula}
                   onChange={(e) => setNuevo({ ...nuevo, cedula: e.target.value.replace(/\D/g, '') })}
@@ -113,7 +113,7 @@ export default function Login() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="etiqueta">PIN (6 digitos)</label>
+                  <label className="etiqueta">PIN (6 dígitos)</label>
                   <input
                     className="campo tracking-widest" required type="password" inputMode="numeric"
                     maxLength={6} value={nuevo.pin}
@@ -139,7 +139,7 @@ export default function Login() {
           ) : (
             <form onSubmit={entrar} className="space-y-4">
               <div>
-                <label className="etiqueta">Cedula</label>
+                <label className="etiqueta">Cédula</label>
                 <input
                   className="campo" required inputMode="numeric" autoFocus autoComplete="username"
                   placeholder="1712345678" value={cedula}
@@ -164,7 +164,7 @@ export default function Login() {
               </button>
 
               <p className="text-xs text-center text-slate-400">
-                ¿Olvidaste tu PIN? Pideselo a Recursos Humanos.
+                ¿Olvidaste tu PIN? Pídeselo a Recursos Humanos.
               </p>
             </form>
           )}

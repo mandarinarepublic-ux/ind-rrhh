@@ -242,7 +242,7 @@ export async function POST(req, { params }) {
     }
 
     if (params.recurso === 'empleados' && body.pin) {
-      if (!/^\d{6}$/.test(String(body.pin))) return error('El PIN debe ser de 6 digitos.');
+      if (!/^\d{6}$/.test(String(body.pin))) return error('El PIN debe ser de 6 dígitos.');
       datos.pin_hash = await bcrypt.hash(String(body.pin), 10);
     }
 
@@ -319,7 +319,7 @@ export async function PATCH(req, { params }) {
 
     if (params.recurso === 'empleados' && body.pin) {
       if (!esAdmin(sesion) && antes.id !== sesion.id) return error('Sin permiso.', 403);
-      if (!/^\d{6}$/.test(String(body.pin))) return error('El PIN debe ser de 6 digitos.');
+      if (!/^\d{6}$/.test(String(body.pin))) return error('El PIN debe ser de 6 dígitos.');
       datos.pin_hash = await bcrypt.hash(String(body.pin), 10);
     }
 

@@ -32,7 +32,7 @@ export default function Reporte() {
       ];
     } else {
       filas = [
-        ['Mes', 'Nomina del mes', 'Pagado', 'Saldo del mes', 'Saldo acumulado'],
+        ['Mes', 'Nómina del mes', 'Pagado', 'Saldo del mes', 'Saldo acumulado'],
         ...porMes.map((m) => [m.periodo, m.devengado, m.pagado, m.saldo_mes, m.saldo_acumulado]),
       ];
     }
@@ -78,7 +78,7 @@ export default function Reporte() {
 
       {vista === 'empleado' ? (
         porEmpleado.length === 0 ? (
-          <div className="tarjeta"><Vacio icono="📈" titulo="Todavia no hay datos" /></div>
+          <div className="tarjeta"><Vacio icono="📈" titulo="Todavía no hay datos" /></div>
         ) : (
           <div className="tarjeta overflow-hidden">
             <div className="scroll-x">

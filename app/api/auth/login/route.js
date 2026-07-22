@@ -56,7 +56,7 @@ export async function POST(req) {
     const clave = String(pin || '').trim();
 
     if (!ced || !clave) {
-      return Response.json({ ok: false, error: 'Ingresa tu cedula y tu PIN.' }, { status: 400 });
+      return Response.json({ ok: false, error: 'Ingresa tu cédula y tu PIN.' }, { status: 400 });
     }
 
     if (bloqueado(ced)) {
@@ -76,7 +76,7 @@ export async function POST(req) {
 
     // Mismo mensaje para "no existe" y "PIN incorrecto": no revelamos que
     // cedulas estan registradas.
-    const generico = { ok: false, error: 'Cedula o PIN incorrectos.' };
+    const generico = { ok: false, error: 'Cédula o PIN incorrectos.' };
 
     if (!emp || !emp.pin_hash) {
       anotarFallo(ced);
@@ -85,7 +85,7 @@ export async function POST(req) {
 
     if (emp.estado === 'INACTIVO') {
       return Response.json(
-        { ok: false, error: 'Tu acceso esta desactivado. Habla con Recursos Humanos.' },
+        { ok: false, error: 'Tu acceso está desactivado. Habla con Recursos Humanos.' },
         { status: 403 }
       );
     }

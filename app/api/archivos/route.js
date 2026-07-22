@@ -34,9 +34,9 @@ export async function POST(req) {
     const empleadoId = form.get('empleado_id');
     const carpeta = form.get('carpeta') || 'general';
 
-    if (!archivo || typeof archivo === 'string') return error('No llego ningun archivo.');
-    if (!empleadoId) return error('Falta indicar de quien es el archivo.');
-    if (archivo.size > MAX_BYTES) return error('El archivo pesa mas de 10 MB.');
+    if (!archivo || typeof archivo === 'string') return error('No llegó ningún archivo.');
+    if (!empleadoId) return error('Falta indicar de quién es el archivo.');
+    if (archivo.size > MAX_BYTES) return error('El archivo pesa más de 10 MB.');
     if (!TIPOS_OK.includes(archivo.type)) {
       return error('Solo se aceptan fotos (JPG, PNG, WEBP, HEIC) o PDF.');
     }

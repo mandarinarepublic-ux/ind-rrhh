@@ -127,7 +127,7 @@ export default function MiFicha() {
             <p className="text-2xl font-bold text-amber-700">
               {money(d.anticipos.reduce((s, a) => s + Number(a.saldo || 0), 0))}
             </p>
-            <p className="text-xs text-amber-800/70">Se descuenta de tus proximos pagos.</p>
+            <p className="text-xs text-amber-800/70">Se descuenta de tus próximos pagos.</p>
           </div>
         </div>
       )}
@@ -162,7 +162,7 @@ export default function MiFicha() {
                     <p className="font-medium text-slate-800">
                       {fecha(v.fecha_desde)} → {fecha(v.fecha_hasta)}
                     </p>
-                    <p className="text-sm text-slate-500">{dias(v.dias)} dias</p>
+                    <p className="text-sm text-slate-500">{dias(v.dias)} días</p>
                     {v.observacion && <p className="text-sm text-slate-400 italic">“{v.observacion}”</p>}
                   </div>
                   <div className="text-right space-y-1">
@@ -313,7 +313,7 @@ export default function MiFicha() {
           Cambiar mi PIN
         </button>
         {esJefatura && (
-          <Link href="/panel" className="btn-suave w-full">Ir al panel de administracion</Link>
+          <Link href="/panel" className="btn-suave w-full">Ir al panel de administración</Link>
         )}
       </div>
 
@@ -556,7 +556,7 @@ function FormVacaciones({ empleadoId, saldo, onListo, onCancelar }) {
   async function enviar(e) {
     e.preventDefault();
     setError('');
-    if (!cantidad) return setError('Las fechas no son validas.');
+    if (!cantidad) return setError('Las fechas no son válidas.');
 
     setEnviando(true);
     try {
@@ -589,8 +589,8 @@ function FormVacaciones({ empleadoId, saldo, onListo, onCancelar }) {
       </div>
 
       <div className={`rounded-xl p-3 text-sm ${alcanza ? 'bg-slate-50 text-slate-600' : 'bg-amber-50 text-amber-800'}`}>
-        Estas pidiendo <b>{cantidad} dia(s)</b> y tienes <b>{dias(saldo)}</b> disponibles.
-        {!alcanza && ' Puedes enviarla igual, pero Recursos Humanos tendra que revisarla.'}
+        Estás pidiendo <b>{cantidad} día(s)</b> y tienes <b>{dias(saldo)}</b> disponibles.
+        {!alcanza && ' Puedes enviarla igual, pero Recursos Humanos tendrá que revisarla.'}
       </div>
 
       <div>
@@ -620,7 +620,7 @@ function FormPin({ empleadoId, onListo, onCancelar }) {
     e.preventDefault();
     setError('');
     if (pin !== pin2) return setError('Los dos PIN no coinciden.');
-    if (!/^\d{6}$/.test(pin)) return setError('El PIN debe ser de 6 digitos.');
+    if (!/^\d{6}$/.test(pin)) return setError('El PIN debe ser de 6 dígitos.');
 
     setGuardando(true);
     try {
@@ -644,7 +644,7 @@ function FormPin({ empleadoId, onListo, onCancelar }) {
         />
       </div>
       <div>
-        <label className="etiqueta">Repitelo</label>
+        <label className="etiqueta">Repítelo</label>
         <input
           className="campo text-center text-xl tracking-[0.4em]" type="password" inputMode="numeric"
           maxLength={6} required value={pin2} onChange={(e) => setPin2(e.target.value.replace(/\D/g, ''))}

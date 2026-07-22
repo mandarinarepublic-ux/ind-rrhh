@@ -61,13 +61,13 @@ export default function Nav({ sesion }) {
               <p className="text-sm font-medium text-slate-700">{sesion.nombre}</p>
               <p className="text-xs text-slate-400">{sesion.rol}</p>
             </div>
-            <button onClick={salir} className="btn-suave !px-3" title="Cerrar sesion">
+            <button onClick={salir} className="btn-suave !px-3" title="Cerrar sesión">
               ⏻
             </button>
             <button
               className="md:hidden btn-suave !px-3"
               onClick={() => setAbierto((v) => !v)}
-              aria-label="Menu"
+              aria-label="Menú"
             >
               ☰
             </button>

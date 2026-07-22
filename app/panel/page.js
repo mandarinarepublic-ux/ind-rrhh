@@ -86,7 +86,7 @@ export default function Resumen() {
         <section className="tarjeta p-4">
           <h2 className="font-semibold text-slate-700 mb-1">Faltas del mes</h2>
           <p className="text-3xl font-bold text-rose-600">{dias(totales.faltasMes)}</p>
-          <p className="text-xs text-slate-400 mb-3">dias perdidos en total</p>
+          <p className="text-xs text-slate-400 mb-3">días perdidos en total</p>
           {datos.ausenciasMes.filter((a) => a.tipo === 'FALTA').slice(0, 4).map((a) => {
             const emp = equipo.find((e) => e.id === a.empleado_id);
             return (
@@ -130,7 +130,7 @@ export default function Resumen() {
         {activos.length === 0 ? (
           <Vacio
             icono="👥"
-            titulo="Todavia no hay nadie cargado"
+            titulo="Todavía no hay nadie cargado"
             detalle="Empieza registrando a las personas del equipo."
             accion={<Link href="/panel/empleados" className="btn-primario">Agregar empleados</Link>}
           />
@@ -140,11 +140,11 @@ export default function Resumen() {
               <thead className="bg-slate-50">
                 <tr>
                   <th className="th">Persona</th>
-                  <th className="th">Area</th>
+                  <th className="th">Área</th>
                   <th className="th text-right">Vacaciones</th>
                   <th className="th text-right">Extras mes</th>
                   <th className="th text-right">Faltas mes</th>
-                  <th className="th text-right">Ultimo pago</th>
+                  <th className="th text-right">Último pago</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">

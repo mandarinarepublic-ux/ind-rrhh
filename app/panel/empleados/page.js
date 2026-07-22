@@ -74,7 +74,7 @@ export default function Empleados() {
       <div className="flex gap-3 flex-wrap items-center">
         <input
           className="campo max-w-xs"
-          placeholder="Buscar por nombre, cedula, cargo…"
+          placeholder="Buscar por nombre, cédula, cargo…"
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
         />
@@ -100,7 +100,7 @@ export default function Empleados() {
         <div className="tarjeta">
           <Vacio
             icono="👥"
-            titulo={busca ? 'Sin resultados' : 'Todavia no hay nadie'}
+            titulo={busca ? 'Sin resultados' : 'Todavía no hay nadie'}
             detalle={busca ? 'Prueba con otro texto.' : 'Agrega a la primera persona del equipo.'}
           />
         </div>
@@ -111,8 +111,8 @@ export default function Empleados() {
               <thead className="bg-slate-50">
                 <tr>
                   <th className="th">Persona</th>
-                  <th className="th">Cedula</th>
-                  <th className="th">Area / cargo</th>
+                  <th className="th">Cédula</th>
+                  <th className="th">Área / cargo</th>
                   <th className="th">Ingreso</th>
                   <th className="th text-right">Sueldo</th>
                   <th className="th">Estado</th>

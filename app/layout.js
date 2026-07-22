@@ -2,7 +2,7 @@ import './globals.css';
 
 export const metadata = {
   title: 'RRHH · INDFACTORY',
-  description: 'Gestion de personal: pagos, horas extra, vacaciones y faltas.',
+  description: 'Gestión de personal: pagos, horas extra, vacaciones y faltas.',
 };
 
 export const viewport = {

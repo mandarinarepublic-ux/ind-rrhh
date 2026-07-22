@@ -50,7 +50,7 @@ export default function Pagos() {
 
   function exportarCSV() {
     const filas = [
-      ['Fecha', 'Cedula', 'Empleado', 'Concepto', 'Periodo', 'Bruto', 'Descuentos', 'Neto', 'Metodo', 'Referencia'],
+      ['Fecha', 'Cédula', 'Empleado', 'Concepto', 'Período', 'Bruto', 'Descuentos', 'Neto', 'Método', 'Referencia'],
       ...(pagos || []).map((p) => {
         const e = quien(p.empleado_id);
         return [
@@ -117,7 +117,7 @@ export default function Pagos() {
                   <th className="th text-right">Bruto</th>
                   <th className="th text-right">Desc.</th>
                   <th className="th text-right">Neto</th>
-                  <th className="th">Metodo</th>
+                  <th className="th">Método</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -299,7 +299,7 @@ function FormPago({ equipo, mes, pago, onListo, onCancelar, onBorrado }) {
           <input type="number" step="0.01" className="campo" value={f.descuentos} onChange={set('descuentos')} />
         </div>
         <div>
-          <label className="etiqueta">Metodo</label>
+          <label className="etiqueta">Método</label>
           <select className="campo" value={f.metodo} onChange={set('metodo')}>
             {['TRANSFERENCIA', 'EFECTIVO', 'CHEQUE', 'OTRO'].map((m) => <option key={m}>{m}</option>)}
           </select>

@@ -94,7 +94,7 @@ export default function Expediente() {
               {empleado.nombres} {empleado.apellidos}
             </h1>
             <p className="text-slate-500">
-              {empleado.cargo || 'Sin cargo'} · {empleado.area || 'Sin area'}
+              {empleado.cargo || 'Sin cargo'} · {empleado.area || 'Sin área'}
             </p>
             <div className="flex gap-2 mt-2 flex-wrap">
               <Chip>{empleado.estado}</Chip>
@@ -108,7 +108,7 @@ export default function Expediente() {
           </button>
 
           <dl className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm w-full lg:w-auto">
-            <Dato titulo="Cedula" valor={empleado.cedula} />
+            <Dato titulo="Cédula" valor={empleado.cedula} />
             <Dato titulo="Ingreso" valor={fecha(empleado.fecha_ingreso)} />
             <Dato titulo="Sueldo" valor={money(empleado.sueldo_base)} />
             <Dato
@@ -165,7 +165,7 @@ export default function Expediente() {
         {registros === null ? (
           <Cargando />
         ) : registros.length === 0 ? (
-          <Vacio icono="📄" titulo="Sin registros todavia" />
+          <Vacio icono="📄" titulo="Sin registros todavía" />
         ) : (
           <Listado
             pestana={pestana}
@@ -218,9 +218,9 @@ function Listado({ pestana, registros, onEditar, onBorrar }) {
   );
 
   const columnas = {
-    ausencias: ['Fecha', 'Tipo', 'Dias', 'Justificada', 'Motivo', ''],
+    ausencias: ['Fecha', 'Tipo', 'Días', 'Justificada', 'Motivo', ''],
     horas_extra: ['Fecha', 'Horas', 'Recargo', 'Valor', 'Estado', ''],
-    vacaciones: ['Desde', 'Hasta', 'Dias', 'Estado', 'Observacion', ''],
+    vacaciones: ['Desde', 'Hasta', 'Días', 'Estado', 'Observación', ''],
     pagos: ['Fecha', 'Concepto', 'Mes', 'Bruto', 'Desc.', 'Neto', ''],
     anticipos: ['Fecha', 'Monto', 'Cuotas', 'Motivo', 'Estado', ''],
   }[pestana];
@@ -252,7 +252,7 @@ function Listado({ pestana, registros, onEditar, onBorrar }) {
                 </td>
                 <td className="td"><Chip>{r.tipo}</Chip></td>
                 <td className="td">{dias(r.dias)}</td>
-                <td className="td">{r.justificada ? '✅ si' : '❌ no'}</td>
+                <td className="td">{r.justificada ? '✅ sí' : '❌ no'}</td>
                 <td className="td text-slate-500 max-w-[220px] truncate">
                   {r.adjunto_url && <span title="Tiene adjunto">📎 </span>}
                   {r.motivo || '—'}
@@ -361,7 +361,7 @@ function FormRegistro({ pestana, empleado, registro, onListo, onCancelar }) {
 
       if (pestana === 'ausencias' || pestana === 'vacaciones') {
         datos.dias = diasEntre(f.fecha_desde, f.fecha_hasta);
-        if (!datos.dias) throw new Error('El rango de fechas no es valido.');
+        if (!datos.dias) throw new Error('El rango de fechas no es válido.');
       }
       if (pestana === 'ausencias') {
         datos.descuento = f.con_sueldo ? 0 : Number(f.descuento || 0);
@@ -369,7 +369,7 @@ function FormRegistro({ pestana, empleado, registro, onListo, onCancelar }) {
 
       if (pestana === 'horas_extra') {
         datos.horas = Number(f.horas);
-        if (!datos.horas) throw new Error('Indica cuantas horas.');
+        if (!datos.horas) throw new Error('Indica cuántas horas.');
         datos.valor_hora = Number(valorHora.toFixed(4));
         // El valor a pagar lo decides tu: si lo dejaste vacio, usa la sugerencia.
         datos.valor_total = f.valor_total === '' || f.valor_total == null
@@ -425,7 +425,7 @@ function FormRegistro({ pestana, empleado, registro, onListo, onCancelar }) {
             </L>
           </div>
           <p className="text-sm text-slate-500">
-            Son <b>{diasEntre(f.fecha_desde, f.fecha_hasta)}</b> dia(s).
+            Son <b>{diasEntre(f.fecha_desde, f.fecha_hasta)}</b> día(s).
           </p>
           <div className="flex gap-5">
             <Check checked={f.justificada} onChange={set('justificada')}>Justificada</Check>
@@ -499,9 +499,9 @@ function FormRegistro({ pestana, empleado, registro, onListo, onCancelar }) {
             </L>
           </div>
           <p className="text-sm text-slate-500">
-            Son <b>{diasEntre(f.fecha_desde, f.fecha_hasta)}</b> dia(s), que se descuentan del saldo.
+            Son <b>{diasEntre(f.fecha_desde, f.fecha_hasta)}</b> día(s), que se descuentan del saldo.
           </p>
-          <L t="Observacion"><input className="campo" value={f.observacion} onChange={set('observacion')} /></L>
+          <L t="Observación"><input className="campo" value={f.observacion} onChange={set('observacion')} /></L>
         </>
       )}
 
@@ -523,7 +523,7 @@ function FormRegistro({ pestana, empleado, registro, onListo, onCancelar }) {
           <div className="grid sm:grid-cols-3 gap-3">
             <L t="Monto bruto"><input type="number" step="0.01" className="campo" required value={f.monto_bruto} onChange={set('monto_bruto')} /></L>
             <L t="Descuentos"><input type="number" step="0.01" className="campo" value={f.descuentos} onChange={set('descuentos')} /></L>
-            <L t="Metodo">
+            <L t="Método">
               <select className="campo" value={f.metodo} onChange={set('metodo')}>
                 {['TRANSFERENCIA', 'EFECTIVO', 'CHEQUE', 'OTRO'].map((t) => <option key={t}>{t}</option>)}
               </select>

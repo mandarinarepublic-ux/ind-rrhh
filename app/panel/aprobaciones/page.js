@@ -48,7 +48,7 @@ export default function Aprobaciones() {
 
       {nada && (
         <div className="tarjeta">
-          <Vacio icono="✅" titulo="Nada pendiente" detalle="Todas las solicitudes estan resueltas." />
+          <Vacio icono="✅" titulo="Nada pendiente" detalle="Todas las solicitudes están resueltas." />
         </div>
       )}
 
@@ -70,12 +70,12 @@ export default function Aprobaciones() {
                       {emp?.nombres} {emp?.apellidos}
                     </p>
                     <p className="text-sm text-slate-500">
-                      {fecha(v.fecha_desde)} → {fecha(v.fecha_hasta)} · <b>{dias(v.dias)} dias</b>
+                      {fecha(v.fecha_desde)} → {fecha(v.fecha_hasta)} · <b>{dias(v.dias)} días</b>
                     </p>
                     <p className={`text-xs mt-0.5 ${alcanza ? 'text-slate-400' : 'text-rose-600 font-medium'}`}>
                       {alcanza
-                        ? `Le quedan ${dias(saldo)} dias de saldo`
-                        : `⚠️ Solo tiene ${dias(saldo)} dias de saldo`}
+                        ? `Le quedan ${dias(saldo)} días de saldo`
+                        : `⚠️ Solo tiene ${dias(saldo)} días de saldo`}
                     </p>
                     {v.observacion && (
                       <p className="text-sm text-slate-500 italic mt-1">“{v.observacion}”</p>

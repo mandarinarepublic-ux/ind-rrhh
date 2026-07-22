@@ -21,7 +21,7 @@ export async function POST(req) {
 
     if ((count || 0) > 0) {
       return Response.json(
-        { ok: false, error: 'El sistema ya esta configurado.' },
+        { ok: false, error: 'El sistema ya está configurado.' },
         { status: 409 }
       );
     }
@@ -36,7 +36,7 @@ export async function POST(req) {
       return Response.json({ ok: false, error: 'Faltan datos.' }, { status: 400 });
     }
     if (!/^\d{6}$/.test(pin)) {
-      return Response.json({ ok: false, error: 'El PIN debe ser de 6 digitos.' }, { status: 400 });
+      return Response.json({ ok: false, error: 'El PIN debe ser de 6 dígitos.' }, { status: 400 });
     }
 
     const { data: emp, error } = await sb

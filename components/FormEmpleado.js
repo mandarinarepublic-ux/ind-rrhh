@@ -9,7 +9,7 @@ const AREAS = ['PRODUCCION', 'BODEGA', 'VENTAS', 'ADMINISTRACION', 'LOGISTICA', 
 const CONTRATOS = ['INDEFINIDO', 'PLAZO_FIJO', 'EVENTUAL', 'PRUEBA', 'SERVICIOS', 'APRENDIZ'];
 const ROLES = [
   { valor: 'EMPLEADO', texto: 'Empleado — solo ve lo suyo' },
-  { valor: 'JEFE', texto: 'Jefe de area — aprueba a su equipo' },
+  { valor: 'JEFE', texto: 'Jefe de área — aprueba a su equipo' },
   { valor: 'RRHH', texto: 'RRHH — acceso completo' },
   { valor: 'ADMIN', texto: 'Administrador — acceso completo' },
 ];
@@ -37,8 +37,8 @@ export default function FormEmpleado({ empleado, jefes = [], onListo, onCancelar
     e.preventDefault();
     setError('');
 
-    if (pin && !/^\d{6}$/.test(pin)) return setError('El PIN debe ser de 6 digitos.');
-    if (!editando && !pin) return setError('Asigna un PIN de 6 digitos para que pueda entrar.');
+    if (pin && !/^\d{6}$/.test(pin)) return setError('El PIN debe ser de 6 dígitos.');
+    if (!editando && !pin) return setError('Asigna un PIN de 6 dígitos para que pueda entrar.');
 
     const datos = {
       ...f,
@@ -60,7 +60,7 @@ export default function FormEmpleado({ empleado, jefes = [], onListo, onCancelar
     } catch (err) {
       setError(
         err.message.includes('duplicate') || err.message.includes('unique')
-          ? 'Ya existe alguien con esa cedula.'
+          ? 'Ya existe alguien con esa cédula.'
           : err.message
       );
     } finally {
@@ -74,15 +74,15 @@ export default function FormEmpleado({ empleado, jefes = [], onListo, onCancelar
         <Entrada etiqueta="Nombres" required value={f.nombres} onChange={set('nombres')} />
         <Entrada etiqueta="Apellidos" required value={f.apellidos} onChange={set('apellidos')} />
         <Entrada
-          etiqueta="Cedula" required inputMode="numeric" value={f.cedula}
+          etiqueta="Cédula" required inputMode="numeric" value={f.cedula}
           onChange={(e) => setF({ ...f, cedula: e.target.value.replace(/\D/g, '') })}
         />
-        <Entrada etiqueta="Telefono" value={f.telefono || ''} onChange={set('telefono')} />
+        <Entrada etiqueta="Teléfono" value={f.telefono || ''} onChange={set('telefono')} />
       </section>
 
       <section className="grid sm:grid-cols-2 gap-3">
         <Entrada etiqueta="Cargo" value={f.cargo || ''} onChange={set('cargo')} placeholder="Costurera, bodeguero…" />
-        <Selector etiqueta="Area" opciones={AREAS} value={f.area || ''} onChange={set('area')} />
+        <Selector etiqueta="Área" opciones={AREAS} value={f.area || ''} onChange={set('area')} />
         <Entrada etiqueta="Fecha de ingreso" type="date" required value={(f.fecha_ingreso || '').slice(0, 10)} onChange={set('fecha_ingreso')} />
         <Selector etiqueta="Tipo de contrato" opciones={CONTRATOS} value={f.tipo_contrato} onChange={set('tipo_contrato')} />
         <Entrada
@@ -109,7 +109,7 @@ export default function FormEmpleado({ empleado, jefes = [], onListo, onCancelar
         <Selector etiqueta="Estado" opciones={ESTADOS} value={f.estado} onChange={set('estado')} />
         <Entrada
           etiqueta={editando ? 'Cambiar PIN' : 'PIN de acceso'}
-          hint={editando ? 'Dejalo vacio para no cambiarlo' : '6 digitos'}
+          hint={editando ? 'Déjalo vacío para no cambiarlo' : '6 dígitos'}
           type="text" inputMode="numeric" maxLength={6} value={pin}
           onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
         />
@@ -117,13 +117,13 @@ export default function FormEmpleado({ empleado, jefes = [], onListo, onCancelar
 
       <section className="grid sm:grid-cols-2 gap-3">
         <Entrada
-          etiqueta="Ajuste de vacaciones (dias)"
-          hint="Saldo con el que arranca en el sistema. Positivo = dias a favor que trae de antes; negativo = dias que ya gozo y no estan cargados aqui."
+          etiqueta="Ajuste de vacaciones (días)"
+          hint="Saldo con el que arranca en el sistema. Positivo = días a favor que trae de antes; negativo = días que ya gozó y no están cargados aquí."
           type="number" step="0.5" value={f.vacaciones_ajuste ?? 0} onChange={set('vacaciones_ajuste')}
         />
         <Campo
-          etiqueta="La nomina cuenta desde"
-          hint="Primer mes en que el sistema empieza a sumar el sueldo adeudado. Ponlo mas atras solo si le arrastras meses pasados a proposito."
+          etiqueta="La nómina cuenta desde"
+          hint="Primer mes en que el sistema empieza a sumar el sueldo adeudado. Ponlo más atrás solo si le arrastras meses pasados a propósito."
         >
           <input
             type="month" className="campo"
