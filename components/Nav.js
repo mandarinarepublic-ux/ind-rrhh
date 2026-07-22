@@ -11,6 +11,7 @@ const ENLACES = [
   { href: '/panel/aprobaciones',  texto: 'Aprobaciones', icono: '✅' },
   { href: '/panel/por-pagar',     texto: 'Por pagar',    icono: '🧮' },
   { href: '/panel/pagos',         texto: 'Pagos',        icono: '💵' },
+  { href: '/panel/reporte',       texto: 'Reporte',      icono: '📈' },
 ];
 
 export default function Nav({ sesion }) {
