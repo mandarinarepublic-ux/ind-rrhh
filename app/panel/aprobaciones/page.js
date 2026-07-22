@@ -36,8 +36,8 @@ export default function Aprobaciones() {
   if (!datos) return <Cargando />;
 
   const quien = (id) => datos.equipo.find((e) => e.id === id);
-  const { vacaciones, extras } = datos.pendientes;
-  const nada = vacaciones.length === 0 && extras.length === 0;
+  const { vacaciones, extras, ausencias = [] } = datos.pendientes;
+  const nada = vacaciones.length === 0 && extras.length === 0 && ausencias.length === 0;
 
   return (
     <div className="space-y-5">
@@ -112,7 +112,90 @@ export default function Aprobaciones() {
           </ul>
         </section>
       )}
+
+      {ausencias.length > 0 && (
+        <section className="tarjeta overflow-hidden">
+          <h2 className="px-4 py-3 border-b border-slate-200 font-semibold text-slate-700">
+            🚫 Ausencias avisadas ({ausencias.length})
+          </h2>
+          <ul className="divide-y divide-slate-100">
+            {ausencias.map((a) => (
+              <FilaAusencia
+                key={a.id}
+                ausencia={a}
+                emp={quien(a.empleado_id)}
+                cargando={procesando === a.id}
+                onAprobar={(datos) => resolver('ausencias', a, 'APROBADA', datos)}
+                onRechazar={() => resolver('ausencias', a, 'RECHAZADA')}
+              />
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
+  );
+}
+
+// Al aprobar una ausencia, tu decides si es justificada, si se le paga igual y,
+// si no, cuanto se le descuenta. El empleado solo aviso que no vendra.
+function FilaAusencia({ ausencia: a, emp, cargando, onAprobar, onRechazar }) {
+  const [justificada, setJustificada] = useState(false);
+  const [conSueldo, setConSueldo] = useState(false);
+  const [descuento, setDescuento] = useState('');
+
+  return (
+    <li className="p-4">
+      <div className="flex flex-wrap items-start gap-4">
+        <Avatar empleado={emp} size={42} />
+        <div className="flex-1 min-w-[200px]">
+          <p className="font-medium text-slate-800">{emp?.nombres} {emp?.apellidos}</p>
+          <p className="text-sm text-slate-500">
+            {fecha(a.fecha_desde)}
+            {a.fecha_hasta !== a.fecha_desde && ` → ${fecha(a.fecha_hasta)}`}
+            {' · '}<b>{a.tipo}</b>{a.dias ? ` · ${dias(a.dias)} día(s)` : ''}
+          </p>
+          {a.motivo && <p className="text-sm text-slate-500 italic mt-1">“{a.motivo}”</p>}
+          <p className="text-xs text-slate-400 mt-1">Avisada el {fechaHora(a.creado_en)}</p>
+        </div>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-end gap-4 bg-slate-50 rounded-xl p-3">
+        <label className="flex items-center gap-2 text-sm text-slate-700">
+          <input type="checkbox" checked={justificada} onChange={(e) => setJustificada(e.target.checked)} className="rounded border-slate-300" />
+          Justificada
+        </label>
+        <label className="flex items-center gap-2 text-sm text-slate-700">
+          <input type="checkbox" checked={conSueldo} onChange={(e) => setConSueldo(e.target.checked)} className="rounded border-slate-300" />
+          Se le paga igual
+        </label>
+        {!conSueldo && (
+          <div>
+            <label className="etiqueta">Descuento</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+              <input
+                type="number" step="0.01" min="0" className="campo !w-32 pl-6"
+                value={descuento} onChange={(e) => setDescuento(e.target.value)} placeholder="0.00"
+              />
+            </div>
+          </div>
+        )}
+        <div className="flex gap-2 ml-auto pb-0.5">
+          <button onClick={onRechazar} disabled={cargando} className="btn-peligro">Rechazar</button>
+          <button
+            onClick={() => onAprobar({
+              justificada,
+              con_sueldo: conSueldo,
+              descuento: conSueldo ? 0 : (Number(descuento) || 0),
+            })}
+            disabled={cargando}
+            className="btn-ok"
+          >
+            {cargando ? '…' : 'Aprobar'}
+          </button>
+        </div>
+      </div>
+    </li>
   );
 }
 

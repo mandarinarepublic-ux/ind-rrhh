@@ -23,6 +23,7 @@ export default function MiFicha() {
   const [vista, setVista] = useState('vacaciones');
   const [pidiendo, setPidiendo] = useState(false);
   const [pidiendoExtra, setPidiendoExtra] = useState(false);
+  const [avisando, setAvisando] = useState(false);
   const [cambiarPin, setCambiarPin] = useState(false);
 
   async function cargar() {
@@ -55,6 +56,16 @@ export default function MiFicha() {
     if (!confirm('¿Cancelar esta solicitud de horas extra?')) return;
     try {
       await api.borrar('horas_extra', h.id);
+      cargar();
+    } catch (e) {
+      alert(e.message);
+    }
+  }
+
+  async function cancelarAusencia(a) {
+    if (!confirm('¿Cancelar este aviso de ausencia?')) return;
+    try {
+      await api.borrar('ausencias', a.id);
       cargar();
     } catch (e) {
       alert(e.message);
@@ -255,25 +266,45 @@ export default function MiFicha() {
         )}
 
         {vista === 'faltas' && (
-          d.ausencias.length === 0
-            ? <div className="tarjeta"><Vacio icono="🎉" titulo="Asistencia perfecta" detalle="Sin faltas ni permisos este año." /></div>
-            : d.ausencias.map((a) => (
-                <div key={a.id} className="tarjeta p-4 flex justify-between items-center gap-3">
-                  <div>
-                    <p className="font-medium text-slate-800">
-                      {fecha(a.fecha_desde)}
-                      {a.fecha_hasta !== a.fecha_desde && ` → ${fecha(a.fecha_hasta)}`}
-                    </p>
-                    <p className="text-sm text-slate-500">
-                      {dias(a.dias)} dia(s){a.motivo ? ` · ${a.motivo}` : ''}
-                    </p>
+          <>
+            <button onClick={() => setAvisando(true)} className="btn-primario w-full">
+              Avisar que no podré asistir
+            </button>
+            <p className="text-xs text-slate-400 px-1">
+              Avisa con tiempo si vas a faltar o necesitas un permiso. Tu jefe lo revisa y decide.
+            </p>
+
+            {d.ausencias.length === 0
+              ? <div className="tarjeta"><Vacio icono="🎉" titulo="Sin faltas ni permisos" detalle="Usa el botón de arriba para avisar una ausencia." /></div>
+              : d.ausencias.map((a) => (
+                  <div key={a.id} className="tarjeta p-4">
+                    <div className="flex justify-between items-start gap-3">
+                      <div>
+                        <p className="font-medium text-slate-800">
+                          {fecha(a.fecha_desde)}
+                          {a.fecha_hasta !== a.fecha_desde && ` → ${fecha(a.fecha_hasta)}`}
+                        </p>
+                        <p className="text-sm text-slate-500">
+                          {dias(a.dias)} día(s){a.motivo ? ` · ${a.motivo}` : ''}
+                        </p>
+                      </div>
+                      <div className="text-right space-y-1">
+                        <Chip>{a.tipo}</Chip>
+                        {a.estado === 'PENDIENTE' && <p className="text-xs text-amber-600">por revisar</p>}
+                        {a.estado === 'RECHAZADA' && <p className="text-xs text-rose-600">rechazada</p>}
+                        {a.justificada && <p className="text-xs text-emerald-600">justificada</p>}
+                      </div>
+                    </div>
+                    {a.estado === 'PENDIENTE' && (
+                      <div className="mt-2 pt-2 border-t border-slate-100 text-right">
+                        <button onClick={() => cancelarAusencia(a)} className="text-xs text-slate-400 hover:text-rose-600">
+                          cancelar aviso
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <div className="text-right space-y-1">
-                    <Chip>{a.tipo}</Chip>
-                    {a.justificada && <p className="text-xs text-emerald-600">justificada</p>}
-                  </div>
-                </div>
-              ))
+                ))}
+          </>
         )}
       </div>
 
@@ -303,6 +334,14 @@ export default function MiFicha() {
         />
       </Modal>
 
+      <Modal abierto={avisando} titulo="Avisar una ausencia" onCerrar={() => setAvisando(false)}>
+        <FormAusencia
+          empleadoId={d.empleado.id}
+          onCancelar={() => setAvisando(false)}
+          onListo={() => { setAvisando(false); setVista('faltas'); cargar(); }}
+        />
+      </Modal>
+
       <Modal abierto={cambiarPin} titulo="Cambiar mi PIN" onCerrar={() => setCambiarPin(false)} ancho="max-w-sm">
         <FormPin
           empleadoId={d.empleado.id}
@@ -311,6 +350,85 @@ export default function MiFicha() {
         />
       </Modal>
     </div>
+  );
+}
+
+function FormAusencia({ empleadoId, onListo, onCancelar }) {
+  const [f, setF] = useState({ fecha_desde: hoyISO(), fecha_hasta: hoyISO(), tipo: 'PERMISO', motivo: '' });
+  const [error, setError] = useState('');
+  const [enviando, setEnviando] = useState(false);
+
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  const cantidad = diasEntre(f.fecha_desde, f.fecha_hasta);
+
+  async function enviar(e) {
+    e.preventDefault();
+    setError('');
+    if (!cantidad) return setError('Las fechas no son válidas.');
+
+    setEnviando(true);
+    try {
+      // El empleado solo avisa. El estado (PENDIENTE), si es con sueldo y el
+      // descuento los define quien aprueba.
+      await api.crear('ausencias', {
+        empleado_id: empleadoId,
+        fecha_desde: f.fecha_desde,
+        fecha_hasta: f.fecha_hasta,
+        dias: cantidad,
+        tipo: f.tipo,
+        motivo: f.motivo,
+      });
+      onListo();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  return (
+    <form onSubmit={enviar} className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="etiqueta">Desde</label>
+          <input type="date" className="campo" required value={f.fecha_desde} onChange={set('fecha_desde')} />
+        </div>
+        <div>
+          <label className="etiqueta">Hasta</label>
+          <input type="date" className="campo" required value={f.fecha_hasta} min={f.fecha_desde} onChange={set('fecha_hasta')} />
+        </div>
+      </div>
+
+      <div>
+        <label className="etiqueta">Motivo</label>
+        <select className="campo" value={f.tipo} onChange={set('tipo')}>
+          <option value="PERMISO">Permiso personal</option>
+          <option value="ENFERMEDAD">Enfermedad</option>
+          <option value="CALAMIDAD">Calamidad doméstica</option>
+          <option value="FALTA">Falta</option>
+          <option value="OTRO">Otro</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="etiqueta">¿Por qué? (opcional)</label>
+        <textarea className="campo" rows={2} value={f.motivo} onChange={set('motivo')} placeholder="Cuéntale a tu jefe el motivo…" />
+      </div>
+
+      <div className="rounded-xl bg-slate-50 p-3 text-xs text-slate-500">
+        Son <b>{cantidad} día(s)</b>. Queda anotada la fecha y hora del aviso. Tu jefe lo revisa
+        y decide si aplica descuento.
+      </div>
+
+      <Aviso>{error}</Aviso>
+
+      <div className="flex justify-end gap-2">
+        <button type="button" onClick={onCancelar} className="btn-suave">Cancelar</button>
+        <button className="btn-primario" disabled={enviando}>
+          {enviando ? 'Enviando…' : 'Enviar aviso'}
+        </button>
+      </div>
+    </form>
   );
 }
 

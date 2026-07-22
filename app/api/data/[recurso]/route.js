@@ -39,7 +39,7 @@ const RECURSOS = {
     orden: { col: 'fecha_desde', asc: false },
     campos: [
       'empleado_id', 'fecha_desde', 'fecha_hasta', 'dias', 'tipo',
-      'justificada', 'con_sueldo', 'motivo', 'adjunto_url', 'descuento',
+      'justificada', 'con_sueldo', 'motivo', 'adjunto_url', 'descuento', 'estado',
     ],
   },
   horas_extra: {
@@ -120,7 +120,7 @@ function completarPeriodo(recurso, datos) {
 // Un empleado puede PEDIR sus vacaciones y sus horas extra, y cancelar la
 // solicitud mientras siga pendiente. Nunca se auto-aprueba: eso lo hace un
 // jefe o RRHH (para no ser juez y parte).
-const RECURSOS_QUE_EL_EMPLEADO_SOLICITA = ['vacaciones', 'horas_extra'];
+const RECURSOS_QUE_EL_EMPLEADO_SOLICITA = ['vacaciones', 'horas_extra', 'ausencias'];
 
 function empleadoPuedeCrear(recurso, sesion, datos) {
   return RECURSOS_QUE_EL_EMPLEADO_SOLICITA.includes(recurso) && datos.empleado_id === sesion.id;
@@ -132,6 +132,9 @@ function empleadoPuedeCrear(recurso, sesion, datos) {
 const CAMPOS_APROBACION = {
   vacaciones: ['estado', 'observacion', 'motivo'],
   horas_extra: ['estado', 'observacion', 'motivo', 'recargo', 'valor_hora', 'valor_total'],
+  // Al aprobar una ausencia, quien decide define si es justificada, con sueldo
+  // y cuanto se descuenta (el empleado solo avisa que no vendra).
+  ausencias: ['estado', 'motivo', 'justificada', 'con_sueldo', 'descuento'],
 };
 
 function jefePuedeAprobar(recurso, campos) {
@@ -228,6 +231,14 @@ export async function POST(req, { params }) {
     if (params.recurso === 'horas_extra' && loPideElEmpleado) {
       datos.valor_hora = null;
       datos.valor_total = null;
+    }
+
+    // El empleado solo AVISA la ausencia: si es con sueldo, justificada y
+    // cuanto se descuenta lo decide quien aprueba.
+    if (params.recurso === 'ausencias' && loPideElEmpleado) {
+      datos.justificada = false;
+      datos.con_sueldo = false;
+      datos.descuento = 0;
     }
 
     if (params.recurso === 'empleados' && body.pin) {

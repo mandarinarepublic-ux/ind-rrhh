@@ -20,15 +20,16 @@ export async function GET() {
 
     const acotar = (q, col) => (alcance ? q.in(col, alcance) : q);
 
-    const [equipo, extrasPend, vacPend, ausenciasMes, pagosMes] = await Promise.all([
+    const [equipo, extrasPend, vacPend, ausPend, ausenciasMes, pagosMes] = await Promise.all([
       acotar(sb.from('vw_resumen_empleado').select('*').order('apellidos'), 'id'),
       acotar(sb.from('horas_extra').select('*').eq('estado', 'PENDIENTE').order('fecha'), 'empleado_id'),
       acotar(sb.from('vacaciones').select('*').eq('estado', 'PENDIENTE').order('fecha_desde'), 'empleado_id'),
-      acotar(sb.from('ausencias').select('*').gte('fecha_desde', inicioMes).order('fecha_desde', { ascending: false }), 'empleado_id'),
+      acotar(sb.from('ausencias').select('*').eq('estado', 'PENDIENTE').order('fecha_desde'), 'empleado_id'),
+      acotar(sb.from('ausencias').select('*').gte('fecha_desde', inicioMes).neq('estado', 'RECHAZADA').order('fecha_desde', { ascending: false }), 'empleado_id'),
       acotar(sb.from('pagos').select('monto_bruto, descuentos, monto_neto').gte('fecha_pago', inicioMes), 'empleado_id'),
     ]);
 
-    for (const r of [equipo, extrasPend, vacPend, ausenciasMes, pagosMes]) {
+    for (const r of [equipo, extrasPend, vacPend, ausPend, ausenciasMes, pagosMes]) {
       if (r.error) throw r.error;
     }
 
@@ -43,6 +44,7 @@ export async function GET() {
       pendientes: {
         extras: extrasPend.data || [],
         vacaciones: vacPend.data || [],
+        ausencias: ausPend.data || [],
       },
       ausenciasMes: ausenciasMes.data || [],
       totales: {
@@ -50,6 +52,7 @@ export async function GET() {
         deVacacionesHoy: activos.filter((e) => e.de_vacaciones_hoy).length,
         extrasPendientes: (extrasPend.data || []).length,
         vacacionesPendientes: (vacPend.data || []).length,
+        ausenciasPendientes: (ausPend.data || []).length,
         faltasMes: (ausenciasMes.data || [])
           .filter((a) => a.tipo === 'FALTA')
           .reduce((s, a) => s + Number(a.dias || 0), 0),

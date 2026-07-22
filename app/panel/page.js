@@ -20,7 +20,7 @@ export default function Resumen() {
   const { totales, equipo, pendientes } = datos;
   const activos = equipo.filter((e) => e.estado !== 'INACTIVO');
   const hoyFuera = activos.filter((e) => e.de_vacaciones_hoy);
-  const porAprobar = totales.extrasPendientes + totales.vacacionesPendientes;
+  const porAprobar = totales.extrasPendientes + totales.vacacionesPendientes + (totales.ausenciasPendientes || 0);
 
   return (
     <div className="space-y-6">
@@ -37,7 +37,7 @@ export default function Resumen() {
         <Metrica
           titulo="Por aprobar"
           valor={porAprobar}
-          detalle={`${totales.vacacionesPendientes} vacaciones · ${totales.extrasPendientes} extras`}
+          detalle={`${totales.vacacionesPendientes} vac · ${totales.extrasPendientes} extras · ${totales.ausenciasPendientes || 0} ausencias`}
           tono={porAprobar ? 'ambar' : 'slate'}
         />
         <Metrica titulo="Pagado este mes" valor={money(totales.pagadoMes)} tono="verde" />
@@ -56,7 +56,8 @@ export default function Resumen() {
                 Tienes {porAprobar} solicitud{porAprobar === 1 ? '' : 'es'} esperando respuesta
               </p>
               <p className="text-sm text-amber-800/80">
-                {pendientes.vacaciones.length} de vacaciones y {pendientes.extras.length} de horas extra.
+                {pendientes.vacaciones.length} de vacaciones, {pendientes.extras.length} de horas extra
+                {pendientes.ausencias?.length ? ` y ${pendientes.ausencias.length} de ausencias` : ''}.
               </p>
             </div>
             <Link href="/panel/aprobaciones" className="btn-primario">Revisar</Link>
