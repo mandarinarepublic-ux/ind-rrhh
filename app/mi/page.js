@@ -285,7 +285,7 @@ export default function MiFicha() {
                           {a.fecha_hasta !== a.fecha_desde && ` → ${fecha(a.fecha_hasta)}`}
                         </p>
                         <p className="text-sm text-slate-500">
-                          {dias(a.dias)} día(s){a.motivo ? ` · ${a.motivo}` : ''}
+                          {a.horas ? `${dias(a.horas)} hora(s)` : `${dias(a.dias)} día(s)`}{a.motivo ? ` · ${a.motivo}` : ''}
                         </p>
                       </div>
                       <div className="text-right space-y-1">
@@ -354,30 +354,36 @@ export default function MiFicha() {
 }
 
 function FormAusencia({ empleadoId, onListo, onCancelar }) {
-  const [f, setF] = useState({ fecha_desde: hoyISO(), fecha_hasta: hoyISO(), tipo: 'PERMISO', motivo: '' });
+  const [f, setF] = useState({ medida: 'dias', fecha_desde: hoyISO(), fecha_hasta: hoyISO(), horas: '', tipo: 'PERMISO', motivo: '' });
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
 
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  const porHoras = f.medida === 'horas';
   const cantidad = diasEntre(f.fecha_desde, f.fecha_hasta);
 
   async function enviar(e) {
     e.preventDefault();
     setError('');
-    if (!cantidad) return setError('Las fechas no son válidas.');
 
     setEnviando(true);
     try {
       // El empleado solo avisa. El estado (PENDIENTE), si es con sueldo y el
       // descuento los define quien aprueba.
-      await api.crear('ausencias', {
-        empleado_id: empleadoId,
-        fecha_desde: f.fecha_desde,
-        fecha_hasta: f.fecha_hasta,
-        dias: cantidad,
-        tipo: f.tipo,
-        motivo: f.motivo,
-      });
+      const base = { empleado_id: empleadoId, tipo: f.tipo, motivo: f.motivo };
+      if (porHoras) {
+        if (!Number(f.horas)) throw new Error('Indica cuántas horas.');
+        Object.assign(base, {
+          fecha_desde: f.fecha_desde,
+          fecha_hasta: f.fecha_desde,
+          horas: Number(f.horas),
+          dias: Number((Number(f.horas) / 8).toFixed(2)),
+        });
+      } else {
+        if (!cantidad) throw new Error('Las fechas no son válidas.');
+        Object.assign(base, { fecha_desde: f.fecha_desde, fecha_hasta: f.fecha_hasta, dias: cantidad });
+      }
+      await api.crear('ausencias', base);
       onListo();
     } catch (err) {
       setError(err.message);
@@ -388,16 +394,42 @@ function FormAusencia({ empleadoId, onListo, onCancelar }) {
 
   return (
     <form onSubmit={enviar} className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="etiqueta">Desde</label>
-          <input type="date" className="campo" required value={f.fecha_desde} onChange={set('fecha_desde')} />
-        </div>
-        <div>
-          <label className="etiqueta">Hasta</label>
-          <input type="date" className="campo" required value={f.fecha_hasta} min={f.fecha_desde} onChange={set('fecha_hasta')} />
-        </div>
+      <div className="flex gap-2">
+        {[['dias', 'Días completos'], ['horas', 'Unas horas']].map(([m, txt]) => (
+          <button
+            key={m} type="button" onClick={() => setF({ ...f, medida: m })}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
+              f.medida === m ? 'bg-ind-600 text-white' : 'bg-slate-100 text-slate-600'
+            }`}
+          >
+            {txt}
+          </button>
+        ))}
       </div>
+
+      {porHoras ? (
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="etiqueta">Día</label>
+            <input type="date" className="campo" required value={f.fecha_desde} onChange={set('fecha_desde')} />
+          </div>
+          <div>
+            <label className="etiqueta">¿Cuántas horas?</label>
+            <input type="number" step="0.5" min="0.5" className="campo" required value={f.horas} onChange={set('horas')} placeholder="Ej: 4" />
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="etiqueta">Desde</label>
+            <input type="date" className="campo" required value={f.fecha_desde} onChange={set('fecha_desde')} />
+          </div>
+          <div>
+            <label className="etiqueta">Hasta</label>
+            <input type="date" className="campo" required value={f.fecha_hasta} min={f.fecha_desde} onChange={set('fecha_hasta')} />
+          </div>
+        </div>
+      )}
 
       <div>
         <label className="etiqueta">Motivo</label>
@@ -416,8 +448,10 @@ function FormAusencia({ empleadoId, onListo, onCancelar }) {
       </div>
 
       <div className="rounded-xl bg-slate-50 p-3 text-xs text-slate-500">
-        Son <b>{cantidad} día(s)</b>. Queda anotada la fecha y hora del aviso. Tu jefe lo revisa
-        y decide si aplica descuento.
+        {porHoras
+          ? <>Pides <b>{f.horas || 0} hora(s)</b> de permiso.</>
+          : <>Son <b>{cantidad} día(s)</b>.</>} Queda anotada la fecha y hora del aviso. Tu jefe lo
+        revisa y decide si aplica descuento.
       </div>
 
       <Aviso>{error}</Aviso>

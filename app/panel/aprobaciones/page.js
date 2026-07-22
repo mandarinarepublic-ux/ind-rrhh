@@ -151,8 +151,9 @@ function FilaAusencia({ ausencia: a, emp, cargando, onAprobar, onRechazar }) {
           <p className="font-medium text-slate-800">{emp?.nombres} {emp?.apellidos}</p>
           <p className="text-sm text-slate-500">
             {fecha(a.fecha_desde)}
-            {a.fecha_hasta !== a.fecha_desde && ` → ${fecha(a.fecha_hasta)}`}
-            {' · '}<b>{a.tipo}</b>{a.dias ? ` · ${dias(a.dias)} día(s)` : ''}
+            {!a.horas && a.fecha_hasta !== a.fecha_desde && ` → ${fecha(a.fecha_hasta)}`}
+            {' · '}<b>{a.tipo}</b>
+            {a.horas ? ` · ${dias(a.horas)} hora(s)` : (a.dias ? ` · ${dias(a.dias)} día(s)` : '')}
           </p>
           {a.motivo && <p className="text-sm text-slate-500 italic mt-1">“{a.motivo}”</p>}
           <p className="text-xs text-slate-400 mt-1">Avisada el {fechaHora(a.creado_en)}</p>

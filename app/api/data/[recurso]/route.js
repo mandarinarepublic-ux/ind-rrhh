@@ -38,7 +38,7 @@ const RECURSOS = {
     firmaCreador: 'registrado_por',
     orden: { col: 'fecha_desde', asc: false },
     campos: [
-      'empleado_id', 'fecha_desde', 'fecha_hasta', 'dias', 'tipo',
+      'empleado_id', 'fecha_desde', 'fecha_hasta', 'dias', 'horas', 'tipo',
       'justificada', 'con_sueldo', 'motivo', 'adjunto_url', 'descuento', 'estado',
     ],
   },

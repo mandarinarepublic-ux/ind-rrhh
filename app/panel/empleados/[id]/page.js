@@ -218,7 +218,7 @@ function Listado({ pestana, registros, onEditar, onBorrar }) {
   );
 
   const columnas = {
-    ausencias: ['Fecha', 'Tipo', 'Días', 'Justificada', 'Motivo', ''],
+    ausencias: ['Fecha', 'Tipo', 'Duración', 'Justificada', 'Motivo', ''],
     horas_extra: ['Fecha', 'Horas', 'Recargo', 'Valor', 'Estado', ''],
     vacaciones: ['Desde', 'Hasta', 'Días', 'Estado', 'Observación', ''],
     pagos: ['Fecha', 'Concepto', 'Mes', 'Bruto', 'Desc.', 'Neto', ''],
@@ -251,7 +251,7 @@ function Listado({ pestana, registros, onEditar, onBorrar }) {
                   {r.fecha_hasta !== r.fecha_desde && <span className="text-slate-400"> → {fecha(r.fecha_hasta)}</span>}
                 </td>
                 <td className="td"><Chip>{r.tipo}</Chip></td>
-                <td className="td">{dias(r.dias)}</td>
+                <td className="td">{r.horas ? `${dias(r.horas)} h` : `${dias(r.dias)} d`}</td>
                 <td className="td">{r.justificada ? '✅ sí' : '❌ no'}</td>
                 <td className="td text-slate-500 max-w-[220px] truncate">
                   {r.adjunto_url && <span title="Tiene adjunto">📎 </span>}
@@ -323,7 +323,7 @@ function FormRegistro({ pestana, empleado, registro, onListo, onCancelar }) {
   const editando = Boolean(registro?.id);
 
   const iniciales = {
-    ausencias:   { fecha_desde: hoy, fecha_hasta: hoy, tipo: 'FALTA', justificada: false, con_sueldo: false, descuento: '', motivo: '', adjunto_url: null },
+    ausencias:   { fecha_desde: hoy, fecha_hasta: hoy, medida: 'dias', horas: '', tipo: 'FALTA', justificada: false, con_sueldo: false, descuento: '', motivo: '', adjunto_url: null },
     horas_extra: { fecha: hoy, horas: '', recargo: 50, valor_total: '', motivo: '', estado: 'APROBADA' },
     vacaciones:  { fecha_desde: hoy, fecha_hasta: hoy, estado: 'APROBADA', observacion: '' },
     pagos:       { fecha_pago: hoy, periodo: periodoActual(), concepto: 'SUELDO', monto_bruto: '', descuentos: '', detalle_desc: '', metodo: 'TRANSFERENCIA', referencia: '', comprobante_url: null },
@@ -340,6 +340,8 @@ function FormRegistro({ pestana, empleado, registro, onListo, onCancelar }) {
     for (const k of ['monto_bruto', 'descuentos', 'monto', 'horas']) {
       if (base[k] !== undefined && base[k] !== null) base[k] = String(base[k]);
     }
+    // Una ausencia con horas se edita en modo "por horas".
+    if (pestana === 'ausencias') base.medida = registro.horas ? 'horas' : 'dias';
     return base;
   });
   const [error, setError] = useState('');
@@ -359,12 +361,24 @@ function FormRegistro({ pestana, empleado, registro, onListo, onCancelar }) {
     try {
       const datos = { ...f, empleado_id: empleado.id };
 
-      if (pestana === 'ausencias' || pestana === 'vacaciones') {
+      if (pestana === 'vacaciones') {
         datos.dias = diasEntre(f.fecha_desde, f.fecha_hasta);
         if (!datos.dias) throw new Error('El rango de fechas no es válido.');
       }
       if (pestana === 'ausencias') {
+        if (f.medida === 'horas') {
+          // Permiso parcial: un solo día, medido en horas.
+          datos.horas = Number(f.horas);
+          if (!datos.horas) throw new Error('Indica cuántas horas.');
+          datos.fecha_hasta = f.fecha_desde;
+          datos.dias = Number((datos.horas / 8).toFixed(2)); // referencia: jornada de 8 h
+        } else {
+          datos.horas = null;
+          datos.dias = diasEntre(f.fecha_desde, f.fecha_hasta);
+          if (!datos.dias) throw new Error('El rango de fechas no es válido.');
+        }
         datos.descuento = f.con_sueldo ? 0 : Number(f.descuento || 0);
+        delete datos.medida; // es solo del formulario, no columna
       }
 
       if (pestana === 'horas_extra') {
@@ -414,19 +428,46 @@ function FormRegistro({ pestana, empleado, registro, onListo, onCancelar }) {
     <form onSubmit={guardar} className="space-y-4">
       {pestana === 'ausencias' && (
         <>
-          <div className="grid sm:grid-cols-3 gap-3">
-            <L t="Desde"><input type="date" className="campo" required value={f.fecha_desde} onChange={set('fecha_desde')} /></L>
-            <L t="Hasta"><input type="date" className="campo" required value={f.fecha_hasta} onChange={set('fecha_hasta')} /></L>
-            <L t="Tipo">
-              <select className="campo" value={f.tipo} onChange={set('tipo')}>
-                {['FALTA', 'ATRASO', 'PERMISO', 'ENFERMEDAD', 'CALAMIDAD', 'MATERNIDAD', 'PATERNIDAD', 'SUSPENSION', 'OTRO']
-                  .map((t) => <option key={t}>{t}</option>)}
-              </select>
-            </L>
+          <div className="flex gap-2">
+            {[['dias', 'Por días'], ['horas', 'Por horas']].map(([m, txt]) => (
+              <button
+                key={m} type="button" onClick={() => setF({ ...f, medida: m })}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
+                  f.medida === m ? 'bg-ind-600 text-white' : 'bg-slate-100 text-slate-600'
+                }`}
+              >
+                {txt}
+              </button>
+            ))}
           </div>
-          <p className="text-sm text-slate-500">
-            Son <b>{diasEntre(f.fecha_desde, f.fecha_hasta)}</b> día(s).
-          </p>
+
+          {f.medida === 'horas' ? (
+            <div className="grid sm:grid-cols-3 gap-3">
+              <L t="Día"><input type="date" className="campo" required value={f.fecha_desde} onChange={set('fecha_desde')} /></L>
+              <L t="Horas de permiso"><input type="number" step="0.5" min="0.5" className="campo" required value={f.horas} onChange={set('horas')} placeholder="Ej: 4" /></L>
+              <L t="Tipo">
+                <select className="campo" value={f.tipo} onChange={set('tipo')}>
+                  {['PERMISO', 'ATRASO', 'ENFERMEDAD', 'CALAMIDAD', 'OTRO'].map((t) => <option key={t}>{t}</option>)}
+                </select>
+              </L>
+            </div>
+          ) : (
+            <>
+              <div className="grid sm:grid-cols-3 gap-3">
+                <L t="Desde"><input type="date" className="campo" required value={f.fecha_desde} onChange={set('fecha_desde')} /></L>
+                <L t="Hasta"><input type="date" className="campo" required value={f.fecha_hasta} onChange={set('fecha_hasta')} /></L>
+                <L t="Tipo">
+                  <select className="campo" value={f.tipo} onChange={set('tipo')}>
+                    {['FALTA', 'ATRASO', 'PERMISO', 'ENFERMEDAD', 'CALAMIDAD', 'MATERNIDAD', 'PATERNIDAD', 'SUSPENSION', 'OTRO']
+                      .map((t) => <option key={t}>{t}</option>)}
+                  </select>
+                </L>
+              </div>
+              <p className="text-sm text-slate-500">
+                Son <b>{diasEntre(f.fecha_desde, f.fecha_hasta)}</b> día(s).
+              </p>
+            </>
+          )}
           <div className="flex gap-5">
             <Check checked={f.justificada} onChange={set('justificada')}>Justificada</Check>
             <Check checked={f.con_sueldo} onChange={set('con_sueldo')}>Se le paga igual</Check>
@@ -442,7 +483,7 @@ function FormRegistro({ pestana, empleado, registro, onListo, onCancelar }) {
                 />
               </div>
               <p className="mt-1 text-xs text-slate-400">
-                Cuánto se le baja del sueldo por este día no trabajado. Se resta de lo que le debes.
+                Cuánto se le baja del sueldo por el tiempo no trabajado. Se resta de lo que le debes.
               </p>
             </L>
           )}
