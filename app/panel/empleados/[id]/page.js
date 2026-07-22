@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { Avatar, Aviso, Cargando, Chip, Modal, Vacio } from '@/components/ui';
 import Adjunto from '@/components/Adjunto';
+import FormEmpleado from '@/components/FormEmpleado';
 import { fecha, money, dias, diasEntre, hoyISO, periodo, periodoActual } from '@/lib/fmt';
 
 const PESTANAS = [
@@ -24,6 +25,8 @@ export default function Expediente() {
   const [pestana, setPestana] = useState('ausencias');
   const [registros, setRegistros] = useState(null);
   const [editando, setEditando] = useState(null); // registro | 'nuevo' | null
+  const [editandoFicha, setEditandoFicha] = useState(false);
+  const [jefes, setJefes] = useState([]);
   const [error, setError] = useState('');
 
   const cargarFicha = useCallback(async () => {
@@ -38,6 +41,17 @@ export default function Expediente() {
       setError(e.message);
     }
   }, [id]);
+
+  // La lista de posibles jefes se necesita solo al abrir la edicion.
+  async function abrirEdicion() {
+    try {
+      const todos = await api.listar('empleados');
+      setJefes(todos.filter((e) => ['JEFE', 'ADMIN', 'RRHH'].includes(e.rol)));
+    } catch {
+      setJefes([]);
+    }
+    setEditandoFicha(true);
+  }
 
   const cargarPestana = useCallback(async () => {
     setRegistros(null);
@@ -89,6 +103,10 @@ export default function Expediente() {
             </div>
           </div>
 
+          <button onClick={abrirEdicion} className="btn-suave shrink-0">
+            ✏️ Editar datos
+          </button>
+
           <dl className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm w-full lg:w-auto">
             <Dato titulo="Cedula" valor={empleado.cedula} />
             <Dato titulo="Ingreso" valor={fecha(empleado.fecha_ingreso)} />
@@ -101,6 +119,20 @@ export default function Expediente() {
           </dl>
         </div>
       </div>
+
+      <Modal
+        abierto={editandoFicha}
+        titulo={`Editar · ${empleado.nombres} ${empleado.apellidos}`}
+        onCerrar={() => setEditandoFicha(false)}
+        ancho="max-w-3xl"
+      >
+        <FormEmpleado
+          empleado={empleado}
+          jefes={jefes}
+          onCancelar={() => setEditandoFicha(false)}
+          onListo={() => { setEditandoFicha(false); cargarFicha(); }}
+        />
+      </Modal>
 
       {/* ---------- pestanas ---------- */}
       <div className="flex gap-1.5 overflow-x-auto pb-1">

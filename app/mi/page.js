@@ -153,26 +153,34 @@ export default function MiFicha() {
         {vista === 'pagos' && (
           d.pagos.length === 0
             ? <div className="tarjeta"><Vacio icono="💵" titulo="Sin pagos registrados" /></div>
-            : d.pagos.map((p) => (
-                <div key={p.id} className="tarjeta p-4">
-                  <div className="flex justify-between items-start gap-3">
-                    <div>
-                      <p className="font-medium text-slate-800">{p.concepto.replace(/_/g, ' ')}</p>
-                      <p className="text-sm text-slate-500">
-                        {fecha(p.fecha_pago)}{p.periodo ? ` · ${periodo(p.periodo)}` : ''}
-                      </p>
-                    </div>
-                    <p className="text-lg font-bold text-emerald-600 whitespace-nowrap">
-                      {money(p.monto_neto)}
-                    </p>
+            : agruparPorMes(d.pagos).map(([mes, delMes, total]) => (
+                <div key={mes} className="space-y-2">
+                  <div className="flex items-baseline justify-between px-1 pt-1">
+                    <h3 className="text-sm font-bold text-slate-700 capitalize">
+                      {mes === 'sin-mes' ? 'Sin mes asignado' : periodo(mes)}
+                    </h3>
+                    <span className="text-sm font-semibold text-emerald-600">{money(total)}</span>
                   </div>
-                  {Number(p.descuentos) > 0 && (
-                    <p className="text-xs text-slate-400 mt-2 pt-2 border-t border-slate-100">
-                      Bruto {money(p.monto_bruto)} − descuentos {money(p.descuentos)}
-                      {p.detalle_desc ? ` (${p.detalle_desc})` : ''}
-                    </p>
-                  )}
-                  {p.comprobante_url && <VerComprobante ruta={p.comprobante_url} />}
+                  {delMes.map((p) => (
+                    <div key={p.id} className="tarjeta p-4">
+                      <div className="flex justify-between items-start gap-3">
+                        <div>
+                          <p className="font-medium text-slate-800">{p.concepto.replace(/_/g, ' ')}</p>
+                          <p className="text-sm text-slate-500">Pagado el {fecha(p.fecha_pago)}</p>
+                        </div>
+                        <p className="text-lg font-bold text-emerald-600 whitespace-nowrap">
+                          {money(p.monto_neto)}
+                        </p>
+                      </div>
+                      {Number(p.descuentos) > 0 && (
+                        <p className="text-xs text-slate-400 mt-2 pt-2 border-t border-slate-100">
+                          Bruto {money(p.monto_bruto)} − descuentos {money(p.descuentos)}
+                          {p.detalle_desc ? ` (${p.detalle_desc})` : ''}
+                        </p>
+                      )}
+                      {p.comprobante_url && <VerComprobante ruta={p.comprobante_url} />}
+                    </div>
+                  ))}
                 </div>
               ))
         )}
@@ -255,6 +263,23 @@ export default function MiFicha() {
       </Modal>
     </div>
   );
+}
+
+/**
+ * Agrupa los pagos por el MES AL QUE CORRESPONDEN (periodo), no por la fecha
+ * en que se hicieron. Devuelve [ [mes, pagosDelMes, totalNeto], ... ] con los
+ * meses mas recientes primero. Los pagos sin periodo caen en 'sin-mes'.
+ */
+function agruparPorMes(pagos) {
+  const mapa = new Map();
+  for (const p of pagos) {
+    const mes = p.periodo || 'sin-mes';
+    if (!mapa.has(mes)) mapa.set(mes, []);
+    mapa.get(mes).push(p);
+  }
+  return [...mapa.entries()]
+    .sort((a, b) => (a[0] < b[0] ? 1 : -1)) // mes mas nuevo arriba
+    .map(([mes, lista]) => [mes, lista, lista.reduce((s, p) => s + Number(p.monto_neto || 0), 0)]);
 }
 
 /** Abre el comprobante con un enlace firmado momentaneo. */
