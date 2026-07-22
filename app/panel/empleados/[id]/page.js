@@ -135,7 +135,7 @@ export default function Expediente() {
       </Modal>
 
       {/* ---------- pestanas ---------- */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1">
+      <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
         {PESTANAS.map((p) => (
           <button
             key={p.id}

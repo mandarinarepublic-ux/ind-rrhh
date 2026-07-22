@@ -84,23 +84,26 @@ export default function MiFicha() {
         </div>
       </header>
 
-      {/* ---------- saldo de vacaciones ---------- */}
+      {/* ---------- acciones principales ---------- */}
       <div className="px-4 -mt-9">
-        <div className="tarjeta p-5 text-center">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Vacaciones disponibles
-          </p>
-          <p className="text-5xl font-bold text-ind-600 my-1">{dias(d.vacaciones.saldo)}</p>
-          <p className="text-sm text-slate-500 mb-4">dias acumulados</p>
-
-          <div className="grid grid-cols-3 gap-2 text-center border-t border-slate-100 pt-3 mb-4">
-            <Mini titulo="Ganados" valor={dias(d.vacaciones.ganados)} />
-            <Mini titulo="Tomados" valor={dias(d.vacaciones.tomados)} />
-            <Mini titulo="En tramite" valor={dias(d.vacaciones.enSolicitud)} />
-          </div>
-
-          <button onClick={() => setPidiendo(true)} className="btn-primario w-full">
-            Solicitar vacaciones
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => setPidiendo(true)}
+            className="tarjeta p-5 flex flex-col items-center justify-center gap-2 hover:border-ind-300 active:scale-[0.98] transition"
+          >
+            <span className="text-3xl">🏖️</span>
+            <span className="font-semibold text-slate-700 text-center leading-tight">
+              Solicitar<br />vacaciones
+            </span>
+          </button>
+          <button
+            onClick={() => setPidiendoExtra(true)}
+            className="tarjeta p-5 flex flex-col items-center justify-center gap-2 hover:border-ind-300 active:scale-[0.98] transition"
+          >
+            <span className="text-3xl">⏱️</span>
+            <span className="font-semibold text-slate-700 text-center leading-tight">
+              Registrar<br />horas extra
+            </span>
           </button>
         </div>
       </div>
@@ -119,7 +122,7 @@ export default function MiFicha() {
       )}
 
       {/* ---------- pestanas ---------- */}
-      <nav className="px-4 mt-5 flex gap-2 overflow-x-auto pb-1">
+      <nav className="px-4 mt-5 flex gap-2 overflow-x-auto no-scrollbar pb-1">
         {VISTAS.map((v) => (
           <button
             key={v.id}
@@ -135,9 +138,14 @@ export default function MiFicha() {
 
       <div className="px-4 mt-3 space-y-3">
         {vista === 'vacaciones' && (
-          d.vacaciones.solicitudes.length === 0
-            ? <div className="tarjeta"><Vacio icono="🏖️" titulo="Sin vacaciones registradas" /></div>
-            : d.vacaciones.solicitudes.map((v) => (
+          <>
+            <p className="text-xs text-slate-400 px-1">
+              Saldo disponible: <b className="text-slate-600">{dias(d.vacaciones.saldo)} días</b>
+              {Number(d.vacaciones.enSolicitud) > 0 && ` · ${dias(d.vacaciones.enSolicitud)} en trámite`}
+            </p>
+            {d.vacaciones.solicitudes.length === 0
+              ? <div className="tarjeta"><Vacio icono="🏖️" titulo="Sin vacaciones registradas" /></div>
+              : d.vacaciones.solicitudes.map((v) => (
                 <div key={v.id} className="tarjeta p-4 flex items-center gap-3">
                   <div className="flex-1">
                     <p className="font-medium text-slate-800">
@@ -158,7 +166,8 @@ export default function MiFicha() {
                     )}
                   </div>
                 </div>
-              ))
+              ))}
+          </>
         )}
 
         {vista === 'pagos' && (
@@ -198,27 +207,21 @@ export default function MiFicha() {
 
         {vista === 'extras' && (
           <>
-            <div className="tarjeta p-4 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">
-                  Horas extra aprobadas este año
-                </p>
-                <p className="text-2xl font-bold text-slate-800">
-                  {dias(d.extras.filter((h) => ['APROBADA', 'PAGADA'].includes(h.estado)).reduce((s, h) => s + Number(h.horas), 0))} h
-                </p>
-              </div>
-              <button onClick={() => setPidiendoExtra(true)} className="btn-primario shrink-0">
-                + Registrar
-              </button>
-            </div>
-
-            <div className="tarjeta p-3 bg-ind-50/50 border-ind-100 text-xs text-slate-500">
-              Registra tus horas extra <b>al momento de hacerlas</b>. Queda anotada la fecha y hora
-              exactas de tu solicitud, y tu jefe la revisa antes de aprobarla.
+            <div className="tarjeta p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">
+                Horas extra aprobadas este año
+              </p>
+              <p className="text-2xl font-bold text-slate-800">
+                {dias(d.extras.filter((h) => ['APROBADA', 'PAGADA'].includes(h.estado)).reduce((s, h) => s + Number(h.horas), 0))} h
+              </p>
+              <p className="text-xs text-slate-400 mt-1">
+                Usa el botón <b>Registrar horas extra</b> de arriba. Queda anotada la fecha y hora
+                exactas, y tu jefe la revisa antes de aprobarla.
+              </p>
             </div>
 
             {d.extras.length === 0
-              ? <div className="tarjeta"><Vacio icono="⏱️" titulo="Sin horas extra" detalle="Registra la primera con el boton de arriba." /></div>
+              ? <div className="tarjeta"><Vacio icono="⏱️" titulo="Sin horas extra" detalle="Regístralas con el botón de arriba." /></div>
               : d.extras.map((h) => (
                   <div key={h.id} className="tarjeta p-4">
                     <div className="flex justify-between items-start gap-3">
@@ -421,13 +424,6 @@ function VerComprobante({ ruta }) {
     </button>
   );
 }
-
-const Mini = ({ titulo, valor }) => (
-  <div>
-    <p className="text-[11px] uppercase tracking-wide text-slate-400 font-semibold">{titulo}</p>
-    <p className="font-semibold text-slate-700">{valor}</p>
-  </div>
-);
 
 function FormVacaciones({ empleadoId, saldo, onListo, onCancelar }) {
   const [desde, setDesde] = useState(hoyISO());
