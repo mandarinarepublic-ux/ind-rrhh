@@ -117,10 +117,28 @@ function completarPeriodo(recurso, datos) {
 }
 
 // --- excepciones al "solo admin escribe" -------------------------------
-// Un empleado puede PEDIR sus vacaciones y cancelar la solicitud mientras
-// siga pendiente. Un jefe puede aprobar/rechazar a su equipo.
+// Un empleado puede PEDIR sus vacaciones y sus horas extra, y cancelar la
+// solicitud mientras siga pendiente. Nunca se auto-aprueba: eso lo hace un
+// jefe o RRHH (para no ser juez y parte).
+const RECURSOS_QUE_EL_EMPLEADO_SOLICITA = ['vacaciones', 'horas_extra'];
+
 function empleadoPuedeCrear(recurso, sesion, datos) {
-  return recurso === 'vacaciones' && datos.empleado_id === sesion.id;
+  return RECURSOS_QUE_EL_EMPLEADO_SOLICITA.includes(recurso) && datos.empleado_id === sesion.id;
+}
+
+/**
+ * Valor de la hora extra, calculado SIEMPRE en el servidor a partir del sueldo
+ * real del empleado. Asi el empleado no puede inflar el monto al solicitarla,
+ * ni depende de lo que mande el navegador.
+ *   valor = horas × (sueldo_base / 240) × (1 + recargo/100)
+ */
+async function calcularValorExtra(sb, empleadoId, horas, recargo) {
+  const { data } = await sb.from('empleados').select('sueldo_base').eq('id', empleadoId).maybeSingle();
+  const valorHora = Number(data?.sueldo_base || 0) / 240;
+  return {
+    valor_hora: Number(valorHora.toFixed(4)),
+    valor_total: Number((Number(horas) * valorHora * (1 + Number(recargo) / 100)).toFixed(2)),
+  };
 }
 
 function jefePuedeAprobar(recurso, campos) {
@@ -202,16 +220,26 @@ export async function POST(req, { params }) {
   if (!cfg || cfg.soloLectura) return error('Recurso no editable.', 404);
 
   try {
+    const sb = getSupabase();
     const body = await req.json();
     const datos = limpiar(cfg, body);
 
-    if (!esAdmin(sesion) && !empleadoPuedeCrear(params.recurso, sesion, datos)) {
+    const loPideElEmpleado = !esAdmin(sesion) && empleadoPuedeCrear(params.recurso, sesion, datos);
+    if (!esAdmin(sesion) && !loPideElEmpleado) {
       return error('No tienes permiso para crear este registro.', 403);
     }
 
-    // Un empleado que pide vacaciones no elige el estado.
-    if (!esAdmin(sesion) && params.recurso === 'vacaciones') {
+    // Lo que solicita un empleado entra PENDIENTE: no se auto-aprueba.
+    if (loPideElEmpleado && RECURSOS_QUE_EL_EMPLEADO_SOLICITA.includes(params.recurso)) {
       datos.estado = 'PENDIENTE';
+    }
+
+    // El valor de la hora extra lo calcula el servidor con el sueldo real.
+    if (params.recurso === 'horas_extra' && datos.horas && datos.recargo) {
+      const empId = datos.empleado_id || sesion.id;
+      const { valor_hora, valor_total } = await calcularValorExtra(sb, empId, datos.horas, datos.recargo);
+      datos.valor_hora = valor_hora;
+      datos.valor_total = valor_total;
     }
 
     if (params.recurso === 'empleados' && body.pin) {
@@ -222,7 +250,7 @@ export async function POST(req, { params }) {
     completarPeriodo(params.recurso, datos);
     if (cfg.firmaCreador) datos[cfg.firmaCreador] = sesion.nombre;
 
-    const { data, error: err } = await getSupabase()
+    const { data, error: err } = await sb
       .from(cfg.tabla)
       .insert(datos)
       .select('*')
@@ -278,7 +306,7 @@ export async function PATCH(req, { params }) {
 
       const jefeAprobando = esJefe(sesion) && enSuEquipo && jefePuedeAprobar(params.recurso, datos);
       const empleadoEditandoSuSolicitud =
-        params.recurso === 'vacaciones' && esSuyo && antes.estado === 'PENDIENTE';
+        RECURSOS_QUE_EL_EMPLEADO_SOLICITA.includes(params.recurso) && esSuyo && antes.estado === 'PENDIENTE';
       // Cualquiera puede cambiar SU PIN, y nada mas que eso.
       const cambiandoSuPin =
         params.recurso === 'empleados' && esSuyo && body.pin && Object.keys(datos).length === 0;
@@ -343,7 +371,7 @@ export async function DELETE(req, { params }) {
 
     if (!esAdmin(sesion)) {
       const esSuSolicitudPendiente =
-        params.recurso === 'vacaciones' &&
+        RECURSOS_QUE_EL_EMPLEADO_SOLICITA.includes(params.recurso) &&
         antes.empleado_id === sesion.id &&
         antes.estado === 'PENDIENTE';
       if (!esSuSolicitudPendiente) return error('No tienes permiso para borrar.', 403);

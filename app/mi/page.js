@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { Avatar, Aviso, Cargando, Chip, Modal, Vacio } from '@/components/ui';
-import { fecha, money, dias, diasEntre, hoyISO, periodo } from '@/lib/fmt';
+import { fecha, fechaHora, money, dias, diasEntre, hoyISO, periodo } from '@/lib/fmt';
 
 const VISTAS = [
   { id: 'vacaciones', texto: 'Vacaciones', icono: '🏖️' },
@@ -22,6 +22,7 @@ export default function MiFicha() {
   const [error, setError] = useState('');
   const [vista, setVista] = useState('vacaciones');
   const [pidiendo, setPidiendo] = useState(false);
+  const [pidiendoExtra, setPidiendoExtra] = useState(false);
   const [cambiarPin, setCambiarPin] = useState(false);
 
   async function cargar() {
@@ -44,6 +45,16 @@ export default function MiFicha() {
     if (!confirm('¿Cancelar esta solicitud?')) return;
     try {
       await api.borrar('vacaciones', v.id);
+      cargar();
+    } catch (e) {
+      alert(e.message);
+    }
+  }
+
+  async function cancelarExtra(h) {
+    if (!confirm('¿Cancelar esta solicitud de horas extra?')) return;
+    try {
+      await api.borrar('horas_extra', h.id);
       cargar();
     } catch (e) {
       alert(e.message);
@@ -187,27 +198,54 @@ export default function MiFicha() {
 
         {vista === 'extras' && (
           <>
-            <div className="tarjeta p-4 text-center">
-              <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">
-                Horas extra del anio
-              </p>
-              <p className="text-3xl font-bold text-slate-800">
-                {dias(d.extras.filter((h) => h.estado !== 'RECHAZADA').reduce((s, h) => s + Number(h.horas), 0))} h
-              </p>
+            <div className="tarjeta p-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">
+                  Horas extra aprobadas este anio
+                </p>
+                <p className="text-2xl font-bold text-slate-800">
+                  {dias(d.extras.filter((h) => ['APROBADA', 'PAGADA'].includes(h.estado)).reduce((s, h) => s + Number(h.horas), 0))} h
+                </p>
+              </div>
+              <button onClick={() => setPidiendoExtra(true)} className="btn-primario shrink-0">
+                + Registrar
+              </button>
             </div>
+
+            <div className="tarjeta p-3 bg-ind-50/50 border-ind-100 text-xs text-slate-500">
+              Registra tus horas extra <b>al momento de hacerlas</b>. Queda anotada la fecha y hora
+              exactas de tu solicitud, y tu jefe la revisa antes de aprobarla.
+            </div>
+
             {d.extras.length === 0
-              ? <div className="tarjeta"><Vacio icono="⏱️" titulo="Sin horas extra" /></div>
+              ? <div className="tarjeta"><Vacio icono="⏱️" titulo="Sin horas extra" detalle="Registra la primera con el boton de arriba." /></div>
               : d.extras.map((h) => (
-                  <div key={h.id} className="tarjeta p-4 flex justify-between items-center gap-3">
-                    <div>
-                      <p className="font-medium text-slate-800">{dias(h.horas)} h · +{h.recargo}%</p>
-                      <p className="text-sm text-slate-500">{fecha(h.fecha)}</p>
-                      {h.motivo && <p className="text-xs text-slate-400">{h.motivo}</p>}
+                  <div key={h.id} className="tarjeta p-4">
+                    <div className="flex justify-between items-start gap-3">
+                      <div>
+                        <p className="font-medium text-slate-800">{dias(h.horas)} h · +{h.recargo}%</p>
+                        <p className="text-sm text-slate-500">Trabajadas el {fecha(h.fecha)}</p>
+                        {h.motivo && <p className="text-xs text-slate-400 mt-0.5">{h.motivo}</p>}
+                      </div>
+                      <div className="text-right space-y-1">
+                        {h.valor_total ? <p className="font-semibold text-slate-700">{money(h.valor_total)}</p> : null}
+                        <Chip>{h.estado}</Chip>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      {h.valor_total && <p className="font-semibold text-slate-700">{money(h.valor_total)}</p>}
-                      <Chip>{h.estado}</Chip>
+                    <div className="mt-2 pt-2 border-t border-slate-100 flex justify-between items-center text-xs text-slate-400">
+                      <span>Solicitada el {fechaHora(h.creado_en)}</span>
+                      {h.estado === 'PENDIENTE' && (
+                        <button
+                          onClick={() => cancelarExtra(h)}
+                          className="text-slate-400 hover:text-rose-600"
+                        >
+                          cancelar
+                        </button>
+                      )}
                     </div>
+                    {h.estado === 'APROBADA' && h.aprobado_por && (
+                      <p className="text-xs text-emerald-600 mt-1">Aprobada por {h.aprobado_por}</p>
+                    )}
                   </div>
                 ))}
           </>
@@ -254,6 +292,14 @@ export default function MiFicha() {
         />
       </Modal>
 
+      <Modal abierto={pidiendoExtra} titulo="Registrar horas extra" onCerrar={() => setPidiendoExtra(false)}>
+        <FormExtra
+          empleadoId={d.empleado.id}
+          onCancelar={() => setPidiendoExtra(false)}
+          onListo={() => { setPidiendoExtra(false); setVista('extras'); cargar(); }}
+        />
+      </Modal>
+
       <Modal abierto={cambiarPin} titulo="Cambiar mi PIN" onCerrar={() => setCambiarPin(false)} ancho="max-w-sm">
         <FormPin
           empleadoId={d.empleado.id}
@@ -262,6 +308,80 @@ export default function MiFicha() {
         />
       </Modal>
     </div>
+  );
+}
+
+function FormExtra({ empleadoId, onListo, onCancelar }) {
+  const [f, setF] = useState({ fecha: hoyISO(), horas: '', recargo: 50, motivo: '' });
+  const [error, setError] = useState('');
+  const [enviando, setEnviando] = useState(false);
+
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+
+  async function enviar(e) {
+    e.preventDefault();
+    setError('');
+    if (!Number(f.horas)) return setError('Indica cuántas horas trabajaste.');
+
+    setEnviando(true);
+    try {
+      // El valor y el estado (PENDIENTE) los pone el servidor.
+      await api.crear('horas_extra', {
+        empleado_id: empleadoId,
+        fecha: f.fecha,
+        horas: Number(f.horas),
+        recargo: Number(f.recargo),
+        motivo: f.motivo,
+      });
+      onListo();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  return (
+    <form onSubmit={enviar} className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="etiqueta">Día que trabajaste</label>
+          <input type="date" className="campo" required value={f.fecha} onChange={set('fecha')} />
+        </div>
+        <div>
+          <label className="etiqueta">Cuántas horas</label>
+          <input type="number" step="0.5" min="0.5" className="campo" required value={f.horas} onChange={set('horas')} placeholder="Ej: 3" />
+        </div>
+      </div>
+
+      <div>
+        <label className="etiqueta">Tipo de recargo</label>
+        <select className="campo" value={f.recargo} onChange={set('recargo')}>
+          <option value={25}>25% — hasta medianoche entre semana</option>
+          <option value={50}>50% — en la noche</option>
+          <option value={100}>100% — fin de semana o feriado</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="etiqueta">¿En qué trabajaste?</label>
+        <textarea className="campo" rows={2} value={f.motivo} onChange={set('motivo')} placeholder="Cierre de pedido, inventario…" />
+      </div>
+
+      <div className="rounded-xl bg-slate-50 p-3 text-xs text-slate-500">
+        Se registrará <b>la fecha y hora exactas</b> de esta solicitud. Tu jefe la revisa y la
+        aprueba; el monto lo calcula el sistema con tu sueldo.
+      </div>
+
+      <Aviso>{error}</Aviso>
+
+      <div className="flex justify-end gap-2">
+        <button type="button" onClick={onCancelar} className="btn-suave">Cancelar</button>
+        <button className="btn-primario" disabled={enviando}>
+          {enviando ? 'Enviando…' : 'Enviar solicitud'}
+        </button>
+      </div>
+    </form>
   );
 }
 

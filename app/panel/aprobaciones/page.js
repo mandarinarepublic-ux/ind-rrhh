@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { Avatar, Aviso, Cargando, Vacio } from '@/components/ui';
-import { fecha, dias, money } from '@/lib/fmt';
+import { fecha, fechaHora, dias, money } from '@/lib/fmt';
 
 export default function Aprobaciones() {
   const [datos, setDatos] = useState(null);
@@ -113,6 +113,7 @@ export default function Aprobaciones() {
                       {h.valor_total ? ` · ${money(h.valor_total)}` : ''}
                     </p>
                     {h.motivo && <p className="text-sm text-slate-500 italic mt-1">“{h.motivo}”</p>}
+                    <p className="text-xs text-slate-400 mt-1">Solicitada el {fechaHora(h.creado_en)}</p>
                   </div>
                   <Botones
                     cargando={procesando === h.id}

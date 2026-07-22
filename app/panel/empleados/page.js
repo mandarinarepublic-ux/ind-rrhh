@@ -9,6 +9,7 @@ import { fecha, money } from '@/lib/fmt';
 
 export default function Empleados() {
   const [lista, setLista] = useState(null);
+  const [deuda, setDeuda] = useState({}); // empleadoId -> total_por_pagar
   const [error, setError] = useState('');
   const [busca, setBusca] = useState('');
   const [verInactivos, setVerInactivos] = useState(false);
@@ -22,7 +23,19 @@ export default function Empleados() {
     }
   }
 
-  useEffect(() => { cargar(); }, []);
+  // La deuda se carga aparte y sin bloquear: si falla, la lista igual se ve.
+  async function cargarDeuda() {
+    try {
+      const rep = await api.porPagar();
+      const mapa = {};
+      for (const f of rep.filas || []) mapa[f.empleado.id] = f.total_por_pagar;
+      setDeuda(mapa);
+    } catch {
+      /* silencioso: el indicador es opcional */
+    }
+  }
+
+  useEffect(() => { cargar(); cargarDeuda(); }, []);
 
   const filtrada = useMemo(() => {
     if (!lista) return [];
@@ -74,6 +87,13 @@ export default function Empleados() {
           />
           Mostrar inactivos
         </label>
+
+        {Object.values(deuda).some((v) => v > 0) && (
+          <span className="flex items-center gap-1.5 text-xs text-slate-400 ml-auto">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400" />
+            con saldo por pagar
+          </span>
+        )}
       </div>
 
       {filtrada.length === 0 ? (
@@ -106,8 +126,14 @@ export default function Empleados() {
                       <Link href={`/panel/empleados/${e.id}`} className="flex items-center gap-2 group">
                         <Avatar empleado={e} size={36} />
                         <span>
-                          <span className="block font-medium text-slate-700 group-hover:text-ind-600">
+                          <span className="flex items-center gap-1.5 font-medium text-slate-700 group-hover:text-ind-600">
                             {e.nombres} {e.apellidos}
+                            {deuda[e.id] > 0 && (
+                              <span
+                                className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"
+                                title={`Le debes ${money(deuda[e.id])}`}
+                              />
+                            )}
                           </span>
                           {e.rol !== 'EMPLEADO' && (
                             <span className="text-xs text-ind-600 font-medium">{e.rol}</span>
