@@ -9,18 +9,22 @@ import { api } from '@/lib/api';
 import { Avatar, Aviso, Cargando, Chip, Modal, Vacio } from '@/components/ui';
 import { fecha, fechaHora, money, dias, diasEntre, hoyISO, periodo } from '@/lib/fmt';
 
+// Vacaciones escondidas del portal por decision de la empresa (20-oct-2026).
+// Los datos siguen en la base y en el panel; para volver a mostrarlas, true.
+const VER_VACACIONES = false;
+
 const VISTAS = [
   { id: 'vacaciones', texto: 'Vacaciones', icono: '🏖️' },
   { id: 'pagos',      texto: 'Mis pagos',  icono: '💵' },
   { id: 'extras',     texto: 'Horas extra', icono: '⏱️' },
   { id: 'faltas',     texto: 'Asistencia', icono: '📅' },
-];
+].filter((v) => VER_VACACIONES || v.id !== 'vacaciones');
 
 export default function MiFicha() {
   const router = useRouter();
   const [d, setD] = useState(null);
   const [error, setError] = useState('');
-  const [vista, setVista] = useState('vacaciones');
+  const [vista, setVista] = useState(VISTAS[0].id);
   const [pidiendo, setPidiendo] = useState(false);
   const [pidiendoExtra, setPidiendoExtra] = useState(false);
   const [avisando, setAvisando] = useState(false);
@@ -98,15 +102,27 @@ export default function MiFicha() {
       {/* ---------- acciones principales ---------- */}
       <div className="px-4 -mt-9">
         <div className="grid grid-cols-2 gap-3">
-          <button
-            onClick={() => setPidiendo(true)}
-            className="tarjeta p-5 flex flex-col items-center justify-center gap-2 hover:border-ind-300 active:scale-[0.98] transition"
-          >
-            <span className="text-3xl">🏖️</span>
-            <span className="font-semibold text-slate-700 text-center leading-tight">
-              Solicitar<br />vacaciones
-            </span>
-          </button>
+          {VER_VACACIONES ? (
+            <button
+              onClick={() => setPidiendo(true)}
+              className="tarjeta p-5 flex flex-col items-center justify-center gap-2 hover:border-ind-300 active:scale-[0.98] transition"
+            >
+              <span className="text-3xl">🏖️</span>
+              <span className="font-semibold text-slate-700 text-center leading-tight">
+                Solicitar<br />vacaciones
+              </span>
+            </button>
+          ) : (
+            <button
+              onClick={() => setAvisando(true)}
+              className="tarjeta p-5 flex flex-col items-center justify-center gap-2 hover:border-ind-300 active:scale-[0.98] transition"
+            >
+              <span className="text-3xl">📅</span>
+              <span className="font-semibold text-slate-700 text-center leading-tight">
+                Avisar<br />ausencia
+              </span>
+            </button>
+          )}
           <button
             onClick={() => setPidiendoExtra(true)}
             className="tarjeta p-5 flex flex-col items-center justify-center gap-2 hover:border-ind-300 active:scale-[0.98] transition"
