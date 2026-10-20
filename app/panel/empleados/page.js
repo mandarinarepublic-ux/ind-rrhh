@@ -43,7 +43,7 @@ export default function Empleados() {
     return lista.filter((e) => {
       if (!verInactivos && e.estado === 'INACTIVO') return false;
       if (!t) return true;
-      return `${e.nombres} ${e.apellidos} ${e.cedula} ${e.cargo || ''} ${e.area || ''}`
+      return `${e.nombres} ${e.apellidos} ${e.telefono || ''} ${e.cedula || ''} ${e.cargo || ''} ${e.area || ''}`
         .toLowerCase()
         .includes(t);
     });
@@ -111,7 +111,7 @@ export default function Empleados() {
               <thead className="bg-slate-50">
                 <tr>
                   <th className="th">Persona</th>
-                  <th className="th">Cédula</th>
+                  <th className="th">Celular</th>
                   <th className="th">Área / cargo</th>
                   <th className="th">Ingreso</th>
                   <th className="th text-right">Sueldo</th>
@@ -141,7 +141,7 @@ export default function Empleados() {
                         </span>
                       </Link>
                     </td>
-                    <td className="td text-slate-500">{e.cedula}</td>
+                    <td className="td text-slate-500">{e.telefono || '—'}</td>
                     <td className="td">
                       <span className="block text-slate-700">{e.cargo || '—'}</span>
                       <span className="block text-xs text-slate-400">{e.area || ''}</span>

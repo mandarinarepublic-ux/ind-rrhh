@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { api } from '@/lib/api';
 import { Aviso, Campo, Entrada, Selector } from '@/components/ui';
-import { hoyISO } from '@/lib/fmt';
+import { hoyISO, normalizarCelular } from '@/lib/fmt';
 
 const AREAS = ['PRODUCCION', 'BODEGA', 'VENTAS', 'ADMINISTRACION', 'LOGISTICA', 'DISENO', 'OTRA'];
 const CONTRATOS = ['INDEFINIDO', 'PLAZO_FIJO', 'EVENTUAL', 'PRUEBA', 'SERVICIOS', 'APRENDIZ'];
@@ -39,6 +39,9 @@ export default function FormEmpleado({ empleado, jefes = [], onListo, onCancelar
 
     if (pin && !/^\d{6}$/.test(pin)) return setError('El PIN debe ser de 6 dígitos.');
     if (!editando && !pin) return setError('Asigna un PIN de 6 dígitos para que pueda entrar.');
+    if (!/^09\d{8}$/.test(normalizarCelular(f.telefono))) {
+      return setError('El celular debe tener 10 dígitos y empezar con 09.');
+    }
 
     const datos = {
       ...f,
@@ -59,9 +62,11 @@ export default function FormEmpleado({ empleado, jefes = [], onListo, onCancelar
       onListo?.(guardado);
     } catch (err) {
       setError(
-        err.message.includes('duplicate') || err.message.includes('unique')
-          ? 'Ya existe alguien con esa cédula.'
-          : err.message
+        err.message.includes('telefono')
+          ? 'Ya existe alguien con ese celular.'
+          : err.message.includes('duplicate') || err.message.includes('unique')
+            ? 'Ya existe alguien con esa cédula.'
+            : err.message
       );
     } finally {
       setGuardando(false);
@@ -74,10 +79,15 @@ export default function FormEmpleado({ empleado, jefes = [], onListo, onCancelar
         <Entrada etiqueta="Nombres" required value={f.nombres} onChange={set('nombres')} />
         <Entrada etiqueta="Apellidos" required value={f.apellidos} onChange={set('apellidos')} />
         <Entrada
-          etiqueta="Cédula" required inputMode="numeric" value={f.cedula}
+          etiqueta="Celular" required type="tel" inputMode="numeric" placeholder="0991234567"
+          hint="Con este número entra a la app"
+          value={f.telefono || ''}
+          onChange={(e) => setF({ ...f, telefono: e.target.value.replace(/\D/g, '') })}
+        />
+        <Entrada
+          etiqueta="Cédula" hint="Opcional" inputMode="numeric" value={f.cedula || ''}
           onChange={(e) => setF({ ...f, cedula: e.target.value.replace(/\D/g, '') })}
         />
-        <Entrada etiqueta="Teléfono" value={f.telefono || ''} onChange={set('telefono')} />
       </section>
 
       <section className="grid sm:grid-cols-2 gap-3">

@@ -15,7 +15,7 @@ App de gestión de personal de **INDFACTORY** (~20 personas). Next.js 14 + Supab
 | **Vercel** | proyecto `ind-rrhh` (team `mandarinarepublic-6819s-projects`), conectado al repo → cada `git push` despliega solo |
 | **Base de datos** | Supabase proyecto `piingkecjgoisnxccvaa` (mandarina-DATA), **schema `rrhh`** (aislado del CRM y los inbox) |
 | **Local (Windows)** | `C:\Users\RodrigoWork\Desktop\ind-rrhh` |
-| **Login** | cédula + PIN de 6 dígitos (bcrypt). Empleados reales ya cargados: 4. |
+| **Login** | **celular** + PIN de 6 dígitos (bcrypt). La cédula es opcional y sigue sirviendo para entrar si alguien aún no tiene celular cargado. |
 
 ---
 
@@ -49,7 +49,7 @@ RLS deny-by-default (la llave pública no lee nada), `service_role` solo en serv
 2. **Faltan ~16 personas por cargar.** Al cargar cada una, revisar dos anclas que el sistema no adivina:
    - **Ajuste de vacaciones**: días que ya traía acumulados.
    - **La nómina cuenta desde**: mes desde el que se le empieza a sumar el sueldo adeudado (por defecto el mes en curso; moverlo atrás solo si se le arrastran meses).
-   - **Ojo con la cédula**: es la llave de acceso; un dígito mal y no puede entrar.
+   - **Ojo con el celular**: es la llave de acceso (10 dígitos, 09…); un dígito mal y no puede entrar. No se puede repetir entre dos personas.
 3. Idea futura mencionada: nada bloqueante. La app funciona de punta a punta.
 
 ---

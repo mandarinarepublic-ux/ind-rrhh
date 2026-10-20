@@ -1,4 +1,4 @@
-// POST /api/auth/login   { cedula, pin }
+// POST /api/auth/login   { usuario, pin }   usuario = celular (o cedula)
 // GET  /api/auth/login   -> { requiereSetup } para saber si hay que crear el
 //                           primer administrador
 
@@ -6,6 +6,7 @@ import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
 import { getSupabase, registrarBitacora } from '@/lib/supabase';
 import { COOKIE, crearSesion, opcionesCookie } from '@/lib/session';
+import { normalizarCelular } from '@/lib/fmt';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,13 +51,16 @@ export async function GET() {
 
 export async function POST(req) {
   try {
-    const { cedula, pin } = await req.json();
+    const { usuario, pin } = await req.json();
 
-    const ced = String(cedula || '').trim();
+    // Se entra con el celular. La cedula sigue valiendo para quien ya la
+    // tenia cargada y aun no tiene celular en su ficha.
+    const ced = String(usuario || '').replace(/\D/g, '');
+    const cel = normalizarCelular(usuario);
     const clave = String(pin || '').trim();
 
     if (!ced || !clave) {
-      return Response.json({ ok: false, error: 'Ingresa tu cédula y tu PIN.' }, { status: 400 });
+      return Response.json({ ok: false, error: 'Ingresa tu celular y tu PIN.' }, { status: 400 });
     }
 
     if (bloqueado(ced)) {
@@ -66,17 +70,22 @@ export async function POST(req) {
       );
     }
 
-    const { data: emp, error } = await getSupabase()
-      .from('empleados')
-      .select('id, cedula, nombres, apellidos, rol, estado, pin_hash')
-      .eq('cedula', ced)
-      .maybeSingle();
+    const sb = getSupabase();
+    const columnas = 'id, cedula, nombres, apellidos, rol, estado, pin_hash';
 
+    // Primero por celular; si no hay nadie con ese numero, por cedula.
+    let { data: emp, error } = await sb
+      .from('empleados').select(columnas).eq('telefono', cel).maybeSingle();
     if (error) throw error;
+    if (!emp) {
+      ({ data: emp, error } = await sb
+        .from('empleados').select(columnas).eq('cedula', ced).maybeSingle());
+      if (error) throw error;
+    }
 
     // Mismo mensaje para "no existe" y "PIN incorrecto": no revelamos que
-    // cedulas estan registradas.
-    const generico = { ok: false, error: 'Cédula o PIN incorrectos.' };
+    // numeros estan registrados.
+    const generico = { ok: false, error: 'Celular o PIN incorrectos.' };
 
     if (!emp || !emp.pin_hash) {
       anotarFallo(ced);

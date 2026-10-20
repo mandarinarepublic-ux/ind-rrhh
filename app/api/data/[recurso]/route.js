@@ -13,6 +13,7 @@
 
 import bcrypt from 'bcryptjs';
 import { getSupabase, registrarBitacora } from '@/lib/supabase';
+import { normalizarCelular } from '@/lib/fmt';
 import {
   exigirSesion, esAdmin, esJefe, error, alcanceEmpleados, puedeVer,
 } from '@/lib/guard';
@@ -103,6 +104,9 @@ function limpiar(cfg, body) {
     const v = body[campo];
     salida[campo] = v === '' ? null : v;
   }
+  // El celular es la llave de acceso: se guarda siempre en la misma forma
+  // que usa el login para buscarlo.
+  if (salida.telefono) salida.telefono = normalizarCelular(salida.telefono) || null;
   return salida;
 }
 

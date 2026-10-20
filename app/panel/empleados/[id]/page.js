@@ -108,7 +108,7 @@ export default function Expediente() {
           </button>
 
           <dl className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm w-full lg:w-auto">
-            <Dato titulo="Cédula" valor={empleado.cedula} />
+            <Dato titulo="Celular" valor={empleado.telefono || '—'} />
             <Dato titulo="Ingreso" valor={fecha(empleado.fecha_ingreso)} />
             <Dato titulo="Sueldo" valor={money(empleado.sueldo_base)} />
             <Dato

@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
 import { getSupabase, registrarBitacora } from '@/lib/supabase';
 import { COOKIE, crearSesion, opcionesCookie } from '@/lib/session';
-import { hoyISO } from '@/lib/fmt';
+import { hoyISO, normalizarCelular } from '@/lib/fmt';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,12 +27,13 @@ export async function POST(req) {
     }
 
     const body = await req.json();
-    const cedula = String(body.cedula || '').trim();
+    const telefono = normalizarCelular(body.telefono);
+    const cedula = String(body.cedula || '').trim() || null;
     const nombres = String(body.nombres || '').trim();
     const apellidos = String(body.apellidos || '').trim();
     const pin = String(body.pin || '').trim();
 
-    if (!cedula || !nombres || !apellidos) {
+    if (!telefono || !nombres || !apellidos) {
       return Response.json({ ok: false, error: 'Faltan datos.' }, { status: 400 });
     }
     if (!/^\d{6}$/.test(pin)) {
@@ -43,6 +44,7 @@ export async function POST(req) {
       .from('empleados')
       .insert({
         cedula,
+        telefono,
         nombres,
         apellidos,
         cargo: body.cargo || 'Administracion',

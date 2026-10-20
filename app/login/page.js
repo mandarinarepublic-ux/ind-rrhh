@@ -8,9 +8,9 @@ import { Aviso, Cargando } from '@/components/ui';
 export default function Login() {
   const router = useRouter();
   const [modo, setModo] = useState(null); // 'login' | 'setup'
-  const [cedula, setCedula] = useState('');
+  const [celular, setCelular] = useState('');
   const [pin, setPin] = useState('');
-  const [nuevo, setNuevo] = useState({ nombres: '', apellidos: '', cedula: '', pin: '', pin2: '' });
+  const [nuevo, setNuevo] = useState({ nombres: '', apellidos: '', telefono: '', pin: '', pin2: '' });
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
 
@@ -27,7 +27,7 @@ export default function Login() {
     setError('');
     setEnviando(true);
     try {
-      await api.login(cedula, pin);
+      await api.login(celular, pin);
       router.replace('/');
       router.refresh();
     } catch (err) {
@@ -104,10 +104,11 @@ export default function Login() {
               </div>
 
               <div>
-                <label className="etiqueta">Cédula</label>
+                <label className="etiqueta">Celular</label>
                 <input
-                  className="campo" required inputMode="numeric" value={nuevo.cedula}
-                  onChange={(e) => setNuevo({ ...nuevo, cedula: e.target.value.replace(/\D/g, '') })}
+                  className="campo" required type="tel" inputMode="numeric" placeholder="0991234567"
+                  value={nuevo.telefono}
+                  onChange={(e) => setNuevo({ ...nuevo, telefono: e.target.value.replace(/\D/g, '') })}
                 />
               </div>
 
@@ -139,11 +140,11 @@ export default function Login() {
           ) : (
             <form onSubmit={entrar} className="space-y-4">
               <div>
-                <label className="etiqueta">Cédula</label>
+                <label className="etiqueta">Celular</label>
                 <input
-                  className="campo" required inputMode="numeric" autoFocus autoComplete="username"
-                  placeholder="1712345678" value={cedula}
-                  onChange={(e) => setCedula(e.target.value.replace(/\D/g, ''))}
+                  className="campo" required type="tel" inputMode="numeric" autoFocus autoComplete="username"
+                  placeholder="0991234567" value={celular}
+                  onChange={(e) => setCelular(e.target.value.replace(/\D/g, ''))}
                 />
               </div>
 
