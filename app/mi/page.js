@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { Avatar, Aviso, Cargando, Chip, Modal, Vacio } from '@/components/ui';
-import { fecha, fechaHora, money, dias, diasEntre, hoyISO, periodo } from '@/lib/fmt';
+import { fecha, fechaHora, money, dias, diasEntre, hoyISO, MESES } from '@/lib/fmt';
 
 // Vacaciones escondidas del portal por decision de la empresa (20-oct-2026).
 // Los datos siguen en la base y en el panel; para volver a mostrarlas, true.
@@ -54,7 +54,14 @@ export default function MiFicha() {
 
   async function cargar() {
     try {
-      setD(await api.mi());
+      const datos = await api.mi();
+      // Sesion de alguien que ya no existe en la base: volver a la entrada.
+      if (!datos?.empleado) {
+        await api.logout();
+        router.replace('/login');
+        return;
+      }
+      setD(datos);
     } catch (e) {
       setError(e.message);
     }
@@ -228,31 +235,34 @@ export default function MiFicha() {
         {vista === 'pagos' && (
           d.pagos.length === 0
             ? <div className="tarjeta"><Vacio icono="💵" titulo="Aquí verás tus pagos con su comprobante" /></div>
-            : agruparPorMes(d.pagos).map(([mes, delMes, total]) => (
-                <div key={mes} className="space-y-2">
-                  <div className="flex items-baseline justify-between px-1 pt-1">
-                    <h3 className="text-sm font-bold text-slate-700 capitalize">
-                      {mes === 'sin-mes' ? 'Otros pagos' : periodo(mes)}
-                    </h3>
+            : agruparPorAnio(d.pagos).map(([anio, meses, totalAnio]) => (
+                <section key={anio} className="tarjeta p-4">
+                  <div className="flex items-baseline justify-between pb-3 border-b border-slate-100">
+                    <h3 className="font-bold text-slate-800">{anio === 'otros' ? 'Otros pagos' : anio}</h3>
                     <span className="text-sm text-slate-500">
-                      recibiste <b className="text-slate-700">{money(total)}</b>
+                      recibiste <b className="text-slate-800">{money(totalAnio)}</b>
                     </span>
                   </div>
-                  {delMes.map((p) => (
-                    <div key={p.id} className="tarjeta p-4">
-                      <div className="flex justify-between items-start gap-3">
-                        <div>
-                          <p className="font-medium text-slate-800">{nombreConcepto(p.concepto)}</p>
-                          <p className="text-sm text-slate-500">Te llegó el {fecha(p.fecha_pago)}</p>
-                        </div>
-                        <p className="text-lg font-bold text-slate-800 whitespace-nowrap">
-                          {money(p.monto_neto)}
-                        </p>
-                      </div>
-                      {p.comprobante_url && <VerComprobante ruta={p.comprobante_url} />}
+                  {meses.map(([mes, delMes]) => (
+                    <div key={mes} className="pt-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        {mes === 'sin-mes' ? 'Sin mes' : MESES[Number(mes.slice(5, 7)) - 1]}
+                      </p>
+                      <ul>
+                        {delMes.map((p) => (
+                          <li key={p.id} className="flex items-baseline gap-3 py-1.5 text-sm">
+                            <span className="w-14 shrink-0 text-slate-400">{fecha(p.fecha_pago).slice(0, -5)}</span>
+                            <span className="flex-1 text-slate-700">{nombreConcepto(p.concepto)}</span>
+                            <span className="font-medium text-slate-800 whitespace-nowrap">{money(p.monto_neto)}</span>
+                            <span className="w-6 text-right">
+                              {p.comprobante_url && <VerComprobante ruta={p.comprobante_url} compacto />}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   ))}
-                </div>
+                </section>
               ))
         )}
 
@@ -588,8 +598,21 @@ function agruparPorMes(pagos) {
     .map(([mes, lista]) => [mes, lista, lista.reduce((s, p) => s + Number(p.monto_neto || 0), 0)]);
 }
 
+/** [anio, [[mes, pagos, total]...], totalAnio], del anio mas nuevo al mas viejo. */
+function agruparPorAnio(pagos) {
+  const anios = new Map();
+  for (const grupo of agruparPorMes(pagos)) {
+    const anio = grupo[0] === 'sin-mes' ? 'otros' : grupo[0].slice(0, 4);
+    if (!anios.has(anio)) anios.set(anio, []);
+    anios.get(anio).push(grupo);
+  }
+  return [...anios.entries()].map(([anio, meses]) => [
+    anio, meses, meses.reduce((s, m) => s + m[2], 0),
+  ]);
+}
+
 /** Abre el comprobante con un enlace firmado momentaneo. */
-function VerComprobante({ ruta }) {
+function VerComprobante({ ruta, compacto = false }) {
   const [abriendo, setAbriendo] = useState(false);
 
   async function abrir() {
@@ -604,6 +627,14 @@ function VerComprobante({ ruta }) {
     } finally {
       setAbriendo(false);
     }
+  }
+
+  if (compacto) {
+    return (
+      <button onClick={abrir} disabled={abriendo} title="Ver comprobante" className="text-base leading-none">
+        {abriendo ? '…' : '📄'}
+      </button>
+    );
   }
 
   return (
