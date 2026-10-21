@@ -19,7 +19,7 @@ export async function GET() {
         .select('id, cedula, nombres, apellidos, cargo, area, fecha_ingreso, estado, foto_url, telefono, email, rol')
         .eq('id', yo).maybeSingle(),
       sb.from('vw_vacaciones_saldo').select('*').eq('empleado_id', yo).maybeSingle(),
-      sb.from('pagos').select('*').eq('empleado_id', yo).order('fecha_pago', { ascending: false }).limit(24),
+      sb.from('pagos').select('*').eq('empleado_id', yo).order('fecha_pago', { ascending: false }).limit(300),
       sb.from('horas_extra').select('*').eq('empleado_id', yo).gte('fecha', `${anio}-01-01`).order('fecha', { ascending: false }),
       sb.from('vacaciones').select('*').eq('empleado_id', yo).order('fecha_desde', { ascending: false }),
       sb.from('ausencias').select('*').eq('empleado_id', yo).gte('fecha_desde', `${anio}-01-01`).order('fecha_desde', { ascending: false }),

@@ -20,6 +20,28 @@ const VISTAS = [
   { id: 'faltas',     texto: 'Asistencia', icono: '📅' },
 ].filter((v) => VER_VACACIONES || v.id !== 'vacaciones');
 
+// Como lo lee el empleado; en la base siguen los codigos (SUELDO, QUINCENA...).
+const CONCEPTOS = {
+  SUELDO: 'Sueldo',
+  QUINCENA: 'Quincena',
+  HORAS_EXTRA: 'Horas extra',
+  DECIMO_TERCERO: 'Décimo tercer sueldo',
+  DECIMO_CUARTO: 'Décimo cuarto sueldo',
+  FONDOS_RESERVA: 'Fondos de reserva',
+  VACACIONES: 'Vacaciones',
+  BONO: 'Bono',
+  COMISION: 'Comisión',
+  LIQUIDACION: 'Liquidación',
+  ANTICIPO: 'Anticipo',
+  OTRO: 'Pago',
+};
+
+function nombreConcepto(c) {
+  if (CONCEPTOS[c]) return CONCEPTOS[c];
+  const t = String(c || 'Pago').replace(/_/g, ' ').toLowerCase();
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
 export default function MiFicha() {
   const router = useRouter();
   const [d, setD] = useState(null);
@@ -138,12 +160,17 @@ export default function MiFicha() {
       {/* ---------- avisos ---------- */}
       {d.anticipos.length > 0 && (
         <div className="px-4 mt-4">
-          <div className="tarjeta p-4 bg-amber-50 border-amber-200">
-            <p className="text-sm font-semibold text-amber-900">Anticipo pendiente</p>
-            <p className="text-2xl font-bold text-amber-700">
-              {money(d.anticipos.reduce((s, a) => s + Number(a.saldo || 0), 0))}
+          <div className="tarjeta p-4 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-slate-700">Tu anticipo</p>
+              <p className="text-xs text-slate-400">Se va descontando poco a poco de tus pagos.</p>
+            </div>
+            <p className="text-right whitespace-nowrap">
+              <span className="block text-xs text-slate-400">te queda</span>
+              <span className="font-semibold text-slate-700">
+                {money(d.anticipos.reduce((s, a) => s + Number(a.saldo || 0), 0))}
+              </span>
             </p>
-            <p className="text-xs text-amber-800/70">Se descuenta de tus próximos pagos.</p>
           </div>
         </div>
       )}
@@ -197,34 +224,31 @@ export default function MiFicha() {
           </>
         )}
 
+        {/* Registro simple de lo recibido: sin saldos, faltantes ni desgloses. */}
         {vista === 'pagos' && (
           d.pagos.length === 0
-            ? <div className="tarjeta"><Vacio icono="💵" titulo="Sin pagos registrados" /></div>
+            ? <div className="tarjeta"><Vacio icono="💵" titulo="Aquí verás tus pagos con su comprobante" /></div>
             : agruparPorMes(d.pagos).map(([mes, delMes, total]) => (
                 <div key={mes} className="space-y-2">
                   <div className="flex items-baseline justify-between px-1 pt-1">
                     <h3 className="text-sm font-bold text-slate-700 capitalize">
-                      {mes === 'sin-mes' ? 'Sin mes asignado' : periodo(mes)}
+                      {mes === 'sin-mes' ? 'Otros pagos' : periodo(mes)}
                     </h3>
-                    <span className="text-sm font-semibold text-emerald-600">{money(total)}</span>
+                    <span className="text-sm text-slate-500">
+                      recibiste <b className="text-slate-700">{money(total)}</b>
+                    </span>
                   </div>
                   {delMes.map((p) => (
                     <div key={p.id} className="tarjeta p-4">
                       <div className="flex justify-between items-start gap-3">
                         <div>
-                          <p className="font-medium text-slate-800">{p.concepto.replace(/_/g, ' ')}</p>
-                          <p className="text-sm text-slate-500">Pagado el {fecha(p.fecha_pago)}</p>
+                          <p className="font-medium text-slate-800">{nombreConcepto(p.concepto)}</p>
+                          <p className="text-sm text-slate-500">Te llegó el {fecha(p.fecha_pago)}</p>
                         </div>
-                        <p className="text-lg font-bold text-emerald-600 whitespace-nowrap">
+                        <p className="text-lg font-bold text-slate-800 whitespace-nowrap">
                           {money(p.monto_neto)}
                         </p>
                       </div>
-                      {Number(p.descuentos) > 0 && (
-                        <p className="text-xs text-slate-400 mt-2 pt-2 border-t border-slate-100">
-                          Bruto {money(p.monto_bruto)} − descuentos {money(p.descuentos)}
-                          {p.detalle_desc ? ` (${p.detalle_desc})` : ''}
-                        </p>
-                      )}
                       {p.comprobante_url && <VerComprobante ruta={p.comprobante_url} />}
                     </div>
                   ))}
@@ -586,9 +610,9 @@ function VerComprobante({ ruta }) {
     <button
       onClick={abrir}
       disabled={abriendo}
-      className="mt-2 text-sm text-ind-600 hover:underline"
+      className="mt-3 w-full py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm text-ind-600 font-medium active:scale-[0.98] transition"
     >
-      📎 {abriendo ? 'Abriendo…' : 'Ver comprobante'}
+      📄 {abriendo ? 'Abriendo…' : 'Ver comprobante'}
     </button>
   );
 }
