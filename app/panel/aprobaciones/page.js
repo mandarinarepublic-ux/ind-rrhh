@@ -200,17 +200,13 @@ function FilaAusencia({ ausencia: a, emp, cargando, onAprobar, onRechazar }) {
   );
 }
 
-// Al aprobar horas extra, el jefe/admin fija el recargo y el valor a pagar
-// (el empleado solo declaro las horas). Se pre-llena una sugerencia calculada
-// con el sueldo, pero es totalmente editable: tu decides el monto.
+// Acuerdo interno: horas declaradas x el valor por hora de la ficha de la
+// persona. Se puede corregir aqui para este registro; el total sale solo.
 function FilaExtra({ extra: h, emp, cargando, onAprobar, onRechazar }) {
-  const valorHora = Number(emp?.sueldo_base || 0) / 240;
-  const [recargo, setRecargo] = useState(50);
-  const sugerido = (Number(h.horas) * valorHora * (1 + recargo / 100)).toFixed(2);
-  const [valor, setValor] = useState('');
-
-  // El valor sugerido sigue al recargo mientras el usuario no lo haya tecleado.
-  const valorEfectivo = valor === '' ? sugerido : valor;
+  const [valorHora, setValorHora] = useState(
+    emp?.valor_hora_extra != null ? String(emp.valor_hora_extra) : ''
+  );
+  const total = Number(h.horas) * Number(valorHora || 0);
 
   return (
     <li className="p-4">
@@ -228,34 +224,29 @@ function FilaExtra({ extra: h, emp, cargando, onAprobar, onRechazar }) {
 
       <div className="mt-3 flex flex-wrap items-end gap-3 bg-slate-50 rounded-xl p-3">
         <div>
-          <label className="etiqueta">Recargo</label>
-          <select className="campo !w-auto" value={recargo} onChange={(e) => setRecargo(Number(e.target.value))}>
-            <option value={25}>25%</option>
-            <option value={50}>50%</option>
-            <option value={100}>100%</option>
-          </select>
-        </div>
-        <div>
-          <label className="etiqueta">Valor a pagar</label>
+          <label className="etiqueta">Valor por hora</label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
             <input
-              type="number" step="0.01" className="campo !w-36 pl-6"
-              value={valorEfectivo}
-              onChange={(e) => setValor(e.target.value)}
+              type="number" step="0.01" min="0" className="campo !w-32 pl-6"
+              value={valorHora} placeholder="0.00"
+              onChange={(e) => setValorHora(e.target.value)}
             />
           </div>
         </div>
-        {emp?.sueldo_base > 0 && (
-          <p className="text-xs text-slate-400 pb-2.5">
-            Sugerido: {money(sugerido)} (sueldo ÷ 240)
+        <p className="text-sm text-slate-600 pb-2.5">
+          {dias(h.horas)} h × {money(valorHora || 0)} = <b>{money(total)}</b>
+        </p>
+        {emp?.valor_hora_extra == null && (
+          <p className="text-xs text-amber-600 pb-2.5 w-full">
+            Su ficha no tiene valor por hora: ponlo en Editar datos y saldrá solo.
           </p>
         )}
         <div className="flex gap-2 ml-auto pb-0.5">
           <button onClick={onRechazar} disabled={cargando} className="btn-peligro">Rechazar</button>
           <button
-            onClick={() => onAprobar({ recargo, valor_total: Number(valorEfectivo) || 0, valor_hora: Number(valorHora.toFixed(4)) })}
-            disabled={cargando}
+            onClick={() => onAprobar({ valor_hora: Number(valorHora) || 0 })}
+            disabled={cargando || !(Number(valorHora) > 0)}
             className="btn-ok"
           >
             {cargando ? '…' : 'Aprobar'}

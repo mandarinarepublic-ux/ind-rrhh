@@ -219,7 +219,7 @@ function Listado({ pestana, registros, onEditar, onBorrar }) {
 
   const columnas = {
     ausencias: ['Fecha', 'Tipo', 'Duración', 'Justificada', 'Motivo', ''],
-    horas_extra: ['Fecha', 'Horas', 'Recargo', 'Valor', 'Estado', ''],
+    horas_extra: ['Fecha', 'Horas', 'Valor hora', 'Total', 'Estado', ''],
     vacaciones: ['Desde', 'Hasta', 'Días', 'Estado', 'Observación', ''],
     pagos: ['Fecha', 'Concepto', 'Mes', 'Bruto', 'Desc.', 'Neto', ''],
     anticipos: ['Fecha', 'Monto', 'Cuotas', 'Motivo', 'Estado', ''],
@@ -265,7 +265,7 @@ function Listado({ pestana, registros, onEditar, onBorrar }) {
               <Fila key={r.id} registro={r}>
                 <td className="td">{fecha(r.fecha)}</td>
                 <td className="td font-medium">{dias(r.horas)} h</td>
-                <td className="td">+{r.recargo}%</td>
+                <td className="td">{r.valor_hora ? money(r.valor_hora) : '—'}</td>
                 <td className="td">{r.valor_total ? money(r.valor_total) : '—'}</td>
                 <td className="td"><Chip>{r.estado}</Chip></td>
                 {borrarBtn}
@@ -324,7 +324,7 @@ function FormRegistro({ pestana, empleado, registro, onListo, onCancelar }) {
 
   const iniciales = {
     ausencias:   { fecha_desde: hoy, fecha_hasta: hoy, medida: 'dias', horas: '', tipo: 'FALTA', justificada: false, con_sueldo: false, descuento: '', motivo: '', adjunto_url: null },
-    horas_extra: { fecha: hoy, horas: '', recargo: 50, valor_total: '', motivo: '', estado: 'APROBADA' },
+    horas_extra: { fecha: hoy, horas: '', valor_hora: empleado.valor_hora_extra ?? '', motivo: '', estado: 'APROBADA' },
     vacaciones:  { fecha_desde: hoy, fecha_hasta: hoy, estado: 'APROBADA', observacion: '' },
     pagos:       { fecha_pago: hoy, periodo: periodoActual(), concepto: 'SUELDO', monto_bruto: '', descuentos: '', detalle_desc: '', metodo: 'TRANSFERENCIA', referencia: '', comprobante_url: null },
     anticipos:   { fecha: hoy, monto: '', cuotas: 1, motivo: '' },
@@ -349,9 +349,6 @@ function FormRegistro({ pestana, empleado, registro, onListo, onCancelar }) {
 
   const set = (k) => (e) =>
     setF({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
-
-  // Sueldo mensual -> valor de la hora (jornada legal de 240 h al mes).
-  const valorHora = Number(empleado.sueldo_base || 0) / 240;
 
   async function guardar(e) {
     e.preventDefault();
@@ -384,11 +381,11 @@ function FormRegistro({ pestana, empleado, registro, onListo, onCancelar }) {
       if (pestana === 'horas_extra') {
         datos.horas = Number(f.horas);
         if (!datos.horas) throw new Error('Indica cuántas horas.');
-        datos.valor_hora = Number(valorHora.toFixed(4));
-        // El valor a pagar lo decides tu: si lo dejaste vacio, usa la sugerencia.
-        datos.valor_total = f.valor_total === '' || f.valor_total == null
-          ? Number((datos.horas * valorHora * (1 + Number(f.recargo) / 100)).toFixed(2))
-          : Number(f.valor_total);
+        // Acuerdo interno: horas x valor por hora. El total lo calcula el servidor.
+        datos.valor_hora = Number(f.valor_hora);
+        if (!(datos.valor_hora > 0)) throw new Error('Indica el valor por hora.');
+        delete datos.valor_total;
+        delete datos.recargo;
       }
 
       if (pestana === 'pagos') {
@@ -420,8 +417,8 @@ function FormRegistro({ pestana, empleado, registro, onListo, onCancelar }) {
     }
   }
 
-  const total = pestana === 'horas_extra' && f.horas
-    ? Number(f.horas) * valorHora * (1 + Number(f.recargo) / 100)
+  const total = pestana === 'horas_extra'
+    ? Number(f.horas || 0) * Number(f.valor_hora || 0)
     : 0;
 
   return (
@@ -503,26 +500,18 @@ function FormRegistro({ pestana, empleado, registro, onListo, onCancelar }) {
           <div className="grid sm:grid-cols-3 gap-3">
             <L t="Fecha"><input type="date" className="campo" required value={f.fecha} onChange={set('fecha')} /></L>
             <L t="Horas"><input type="number" step="0.5" min="0.5" className="campo" required value={f.horas} onChange={set('horas')} /></L>
-            <L t="Recargo">
-              <select className="campo" value={f.recargo} onChange={set('recargo')}>
-                <option value={25}>25% — hasta las 24h</option>
-                <option value={50}>50% — nocturna</option>
-                <option value={100}>100% — fin de semana o feriado</option>
-              </select>
+            <L t="Valor por hora">
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                <input
+                  type="number" step="0.01" min="0" className="campo pl-6" required
+                  value={f.valor_hora ?? ''} onChange={set('valor_hora')} placeholder="0.00"
+                />
+              </div>
             </L>
           </div>
-          <L t="Valor a pagar">
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
-              <input
-                type="number" step="0.01" className="campo pl-6"
-                value={f.valor_total === '' || f.valor_total == null ? total.toFixed(2) : f.valor_total}
-                onChange={set('valor_total')}
-              />
-            </div>
-          </L>
-          <p className="text-xs text-slate-400">
-            Sugerido {money(total)} (sueldo ÷ 240 × recargo). Puedes poner el monto que decidas.
+          <p className="text-sm text-slate-600">
+            {Number(f.horas || 0)} h × {money(f.valor_hora || 0)} = <b>{money(total)}</b>
           </p>
           <L t="Motivo"><input className="campo" value={f.motivo} onChange={set('motivo')} placeholder="Cierre de pedido, inventario…" /></L>
         </>

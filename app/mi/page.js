@@ -287,7 +287,7 @@ export default function MiFicha() {
                   <div key={h.id} className="tarjeta p-4">
                     <div className="flex justify-between items-start gap-3">
                       <div>
-                        <p className="font-medium text-slate-800">{dias(h.horas)} h · +{h.recargo}%</p>
+                        <p className="font-medium text-slate-800">{dias(h.horas)} h</p>
                         <p className="text-sm text-slate-500">Trabajadas el {fecha(h.fecha)}</p>
                         {h.motivo && <p className="text-xs text-slate-400 mt-0.5">{h.motivo}</p>}
                       </div>

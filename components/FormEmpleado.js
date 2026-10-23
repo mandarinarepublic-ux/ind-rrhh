@@ -46,6 +46,7 @@ export default function FormEmpleado({ empleado, jefes = [], onListo, onCancelar
     const datos = {
       ...f,
       sueldo_base: f.sueldo_base === '' ? 0 : Number(f.sueldo_base),
+      valor_hora_extra: f.valor_hora_extra === '' || f.valor_hora_extra == null ? null : Number(f.valor_hora_extra),
       vacaciones_ajuste: f.vacaciones_ajuste === '' ? 0 : Number(f.vacaciones_ajuste),
       jefe_id: f.jefe_id || null,
       fecha_salida: f.fecha_salida || null,
@@ -98,6 +99,11 @@ export default function FormEmpleado({ empleado, jefes = [], onListo, onCancelar
         <Entrada
           etiqueta="Sueldo base" type="number" step="0.01" min="0"
           value={f.sueldo_base ?? ''} onChange={set('sueldo_base')}
+        />
+        <Entrada
+          etiqueta="Valor hora extra" hint="Lo acordado por hora. Al aprobar: horas × este valor."
+          type="number" step="0.01" min="0"
+          value={f.valor_hora_extra ?? ''} onChange={set('valor_hora_extra')}
         />
         <Selector
           etiqueta="Jefe directo"

@@ -30,7 +30,7 @@ const RECURSOS = {
       'direccion', 'foto_url', 'cargo', 'area', 'jefe_id', 'fecha_ingreso',
       'fecha_salida', 'tipo_contrato', 'sueldo_base', 'jornada', 'banco',
       'tipo_cuenta', 'nro_cuenta', 'rol', 'estado', 'motivo_salida', 'notas',
-      'vacaciones_ajuste', 'nomina_desde',
+      'vacaciones_ajuste', 'nomina_desde', 'valor_hora_extra',
     ],
   },
   ausencias: {
@@ -108,6 +108,16 @@ function limpiar(cfg, body) {
   // que usa el login para buscarlo.
   if (salida.telefono) salida.telefono = normalizarCelular(salida.telefono) || null;
   return salida;
+}
+
+/**
+ * Acuerdo interno: hora extra = horas x valor por hora de la persona.
+ * Si viene el valor por hora, el total lo calcula el servidor (no se teclea).
+ */
+function calcularExtra(recurso, datos, antes = {}) {
+  if (recurso !== 'horas_extra' || datos.valor_hora == null) return;
+  const horas = Number(datos.horas ?? antes.horas ?? 0);
+  datos.valor_total = Math.round(horas * Number(datos.valor_hora) * 100) / 100;
 }
 
 /**
@@ -251,6 +261,7 @@ export async function POST(req, { params }) {
     }
 
     completarPeriodo(params.recurso, datos);
+    calcularExtra(params.recurso, datos);
     if (cfg.firmaCreador) datos[cfg.firmaCreador] = sesion.nombre;
 
     const { data, error: err } = await sb
@@ -318,7 +329,13 @@ export async function PATCH(req, { params }) {
         return error('No tienes permiso para modificar este registro.', 403);
       }
       // Un empleado no cambia el estado de su propia solicitud.
-      if (empleadoEditandoSuSolicitud && !jefeAprobando) delete datos.estado;
+      if (empleadoEditandoSuSolicitud && !jefeAprobando) {
+        delete datos.estado;
+        // ...ni le pone precio a sus horas extra.
+        delete datos.valor_hora;
+        delete datos.valor_total;
+        delete datos.recargo;
+      }
     }
 
     if (params.recurso === 'empleados' && body.pin) {
@@ -333,6 +350,8 @@ export async function PATCH(req, { params }) {
       datos.aprobado_por = sesion.nombre;
       datos.aprobado_en = new Date().toISOString();
     }
+
+    calcularExtra(params.recurso, datos, antes);
 
     if (Object.keys(datos).length === 0) return error('Nada que actualizar.');
 
